@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>숏츠 자동화 프로그램 - UI</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #e2e8f0;
+            --accent-color: #667eea;
+            --accent-hover: #5a67d8;
+            --card-bg: rgb(225, 231, 235);
+            --card-border: #e2e8f0;
+            --download-bg: #28a745;
+            --download-hover-bg: #218838;
+            --upload-bg: #f8f9ff;
+            --upload-border: #667eea;
+            --upload-hover-bg: #f0f2ff;
+            --upload-hover-border: #764ba2;
+            --btn-disabled-bg: #ccc;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --success-border: #2f4434;
+            --error-bg: #bfc9c7;
+            --error-text: #721c24;
+            --error-border: #cfe3e3;
+            --input-bg: rgb(209, 225, 224);
+            --input-border: #ddd;
+        }
+
+        body.dark-mode {
+            --bg-gradient: linear-gradient(135deg, #08282f 0%, #1a2a2f 100%);
+            --panel-bg: rgba(30, 45, 50, 0.95);
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border-color: #405560;
+            --accent-color: #00897b;
+            --accent-hover: #00695c;
+            --card-bg: #2c3e50;
+            --card-border: #405560;
+            --download-bg: #388e3c;
+            --download-hover-bg: #2e7d32;
+            --upload-bg: #2a3f34;
+            --upload-border: #26a69a;
+            --upload-hover-bg: #37454f;
+            --btn-disabled-bg: #555;
+            --success-bg: #2e7d32;
+            --success-text: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding: 1rem;
+            color: var(--text-primary);
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 7fr 3fr; /* 7:3 비율로 조정 */
+            gap: 2rem;
+        }
+
+        .left-panel, .right-panel {
+            background: var(--panel-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            min-width: 300px; /* Prevent panels from becoming too small */
+            overflow: auto; /* Add scroll for smaller sizes */
+            transition: background 0.3s ease;
+        }
+        
+        .resizer {
+            background-color: rgba(0,0,0,0.1);
+            cursor: col-resize;
+            width: 10px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .resizer:hover, .resizer.active {
+            background-color: #667eea;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .title-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        body.dark-mode .title-box {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .header .title-box {
+            display: inline-block;
+            text-align: center;
+            padding: 1.5rem 2.5rem;
+        }
+        
+        .left-panel .title-box,
+        .right-panel .title-box {
+            margin-bottom: 1.5rem;
+        }
+
+        .title-box > * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .title-box h1 {
+            margin-bottom: 0.25rem;
+        }
+        
+        .title-box p {
+            color: var(--text-secondary);
+        }
+
+        #theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: none;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        #theme-toggle:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            transform: rotate(15deg);
+        }
+
+        .upload-section {
+            background: var(--upload-bg);
+            border: 2px dashed var(--upload-border);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-section:hover {
+            background: var(--upload-hover-bg);
+            border-color: var(--upload-hover-border);
+        }
+
+        .upload-section.dragover {
+            background: #e8ecff;
+            border-color: var(--accent-hover);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            background: var(--success-bg);
+            color: var(--success-text);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .options-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .option-group {
+            background: var(--upload-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .option-group:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .option-group h3 {
+            color: var(--text-primary);
+            margin-top: 0;
+            margin-bottom: 1.2rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-color);
+        }
+
+        .platform-selection {
+            margin-bottom: 2rem;
+        }
+
+        .platform-selection h3 {
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .platform-grid {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .platform-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 10px;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            max-width: 120px;
+            font-size: 0.8rem;
+        }
+
+        .platform-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .platform-card.selected {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .platform-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .process-section {
+            text-align: center;
+        }
+
+        .process-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .process-btn:hover {
+            transform: translateY(-3px);
+            background: var(--accent-hover);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .process-btn:disabled {
+            background: var(--btn-disabled-bg);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-section {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-text {
+            text-align: center;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* 오른쪽 패널 스타일 */
+        .video-preview-section {
+            margin-bottom: 2rem;
+            display: none; /* Hidden by default */
+        }
+
+        .video-preview-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 1.5rem; /* More space */
+            text-align: center;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            position: relative;
+            width: 100%;
+            height: 400px; /* Set a fixed height for the container */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Show the entire video without cropping */
+        }
+
+        .video-placeholder {
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            font-size: 1.2rem;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            aspect-ratio: 9 / 16;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .control-btn:disabled {
+            background: var(--btn-disabled-bg);
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: block;
+        }
+
+        .results-section h3 {
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 9 / 16;
+            max-width: 240px;
+            width: 100%;
+            background: var(--upload-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 15px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 1rem;
+            margin: 0 auto;
+        }
+
+        .result-video-grid {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-video-item {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-video-item h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .result-video-container {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            aspect-ratio: 9 / 16;
+            max-width: 240px; /* Set max-width as requested */
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Fill the container for 9:16 shorts */
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .download-btn {
+            background: var(--download-bg);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: var(--download-hover-bg);
+        }
+
+        .upload-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .upload-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-modal.active {
+            display: flex;
+        }
+
+        .upload-modal-content {
+            background: var(--panel-bg);
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 0.5rem;
+            border: 1px solid var(--input-border);
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
+        .modal-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .modal-btn.cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .modal-btn.upload {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .status-message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status-message.success {
+            background: var(--success-bg);
+            color: var(--success-text);
+            border: 1px solid var(--success-border);
+        }
+
+        .status-message.error {
+            background: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid var(--error-border);
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+            }
+            
+            .right-panel {
+                order: -1;
+            }
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            margin-top: 10px;
+        }
+
+        #video-display-section {
+            width: 50%; /* 초기 너비 */
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            padding-right: 5px;
+            /* border-right 속성 제거 */
+        }
+
+        #resizer {
+            width: 5px;
+            cursor: col-resize;
+            background-color: var(--border-color);
+            flex-shrink: 0;
+            transition: background-color 0.2s;
+        }
+        #resizer:hover {
+            background-color: var(--accent-color);
+        }
+
+        #video-work-section {
+            flex-grow: 1; /* 남은 공간을 모두 차지 */
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            padding-left: 5px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .setting-item:first-of-type {
+            margin-top: 0.5rem;
+        }
+
+        .setting-item label {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .setting-input {
+            width: 80px;
+            padding: 0.5rem;
+            border-radius: 5px;
+            border: 1px solid var(--input-border);
+            text-align: center;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        #videoEditorContainer {
+            width: 100%;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            /* aspect-ratio 제거 */
+        }
+
+        #videoPreview {
+            width: 100%;
+            height: auto;
+            max-height: 500px; /* 비디오 최대 높이 제한 추가 */
+            display: block; /* 수직 정렬 문제 방지 */
+        }
+
+        .short-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .short-item .video-container {
+            position: relative;
+            cursor: pointer;
+            aspect-ratio: 9 / 16;
+            background-color: #000;
+            max-width: 288px;
+            margin: 0 auto;
+        }
+
+        .short-item video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .short-item .video-overlay {
+            position: absolute;
+        }
+
+        .short-info {
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--upload-bg);
+        }
+
+        #completedShortsGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(292px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+            justify-items: center;
+        }
+
+        .short-item {
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            max-width: 292px;
+        }
+
+        .short-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-layout">
+        <!-- 왼쪽 패널: 설정 및 컨트롤 -->
+        <div class="left-panel">
+            <div class="header">
+                <div class="title-box">
+                    <h1>🎬 숏츠 자동화</h1>
+                    <p>전문급 영상 처리 및 자동 편집 시스템</p>
+                </div>
+                <button id="theme-toggle">🌙</button>
+            </div>
+
+            <!-- 파일 업로드 섹션 -->
+            <div class="upload-section" id="uploadContainer">
+                <div class="upload-icon">📁</div>
+                <h3>영상 파일을 드래그하거나 클릭하여 업로드</h3>
+                <p>MP4, AVI, MOV 파일 지원</p>
+                <input type="file" id="file-input" class="file-input" accept="video/*">
+                <div class="file-info" id="fileInfo">
+                    <p id="fileName"></p>
+                    <p id="fileSize"></p>
+                </div>
+            </div>
+
+            <!-- 원본 영상 미리보기 (업로드 후 표시) -->
+            <div class="video-preview-section" id="videoPreviewSection">
+                <h3>📹&nbsp;원본 영상 미리보기</h3>
+                <div class="video-container" id="originalVideoContainer">
+                    <div class="video-placeholder">
+                        영상을 업로드하면 여기에서 미리볼 수 있습니다
+                    </div>
+                </div>
+                <div class="video-controls">
+                    <button class="control-btn" id="playBtn" disabled>▶️ 재생</button>
+                    <button class="control-btn" id="pauseBtn" disabled>⏸️ 일시정지</button>
+                    <button class="control-btn" id="rewindBtn" disabled>⏪ 되감기</button>
+                </div>
+            </div>
+            
+            <!-- 처리 옵션 섹션 -->
+            <div id="videoEditorContainer" style="display: none;">
+                <video id="videoPreview" controls></video>
+            </div>
+
+            <div class="options-section">
+                <div class="option-group">
+                    <h3>📼 영상 처리</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="autoHighlight" name="video_processing" value="highlight" checked>
+                            <label for="autoHighlight">자동 하이라이트 추출</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="autoCrop" name="video_processing" value="crop" checked>
+                            <label for="autoCrop">자동 크롭</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="colorCorrection" name="video_processing" value="color" checked>
+                            <label for="colorCorrection">색상 보정</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="videoStabilization" name="video_processing" value="stabilize">
+                            <label for="videoStabilization">영상 안정화</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>🔊 오디오 처리</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="removeSilence" name="audio_processing" value="silence" checked>
+                            <label for="removeSilence">무음 구간 제거</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enhanceAudio" name="audio_processing" value="enhance" checked>
+                            <label for="enhanceAudio">오디오 향상</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="noiseReduction" name="audio_processing" value="noise" checked>
+                            <label for="noiseReduction">노이즈 감소</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>📝&nbsp;추가 기능</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addTitle" name="features" value="title">
+                            <label for="addTitle">타이틀 추가</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addSubtitles" name="features" value="subtitles">
+                            <label for="addSubtitles">자막 추가</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addEffects" name="features" value="effects">
+                            <label for="addEffects">영상효과 추가</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>⚙️&nbsp;숏츠 생성 설정</h3>
+                    <div class="setting-item">
+                        <label for="shortsLength">영상 길이</label>
+                        <select id="shortsLength" class="setting-input">
+                            <option value="15">15초</option>
+                            <option value="30">30초</option>
+                            <option value="45">45초</option>
+                            <option value="60" selected>60초</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="shortsCount">생성 개수</label>
+                        <input type="number" id="shortsCount" class="setting-input" value="1" min="1" max="10">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 플랫폼 선택 섹션 -->
+            <div class="platform-selection">
+                <div class="title-box">
+                    <h3>🎯 타겟 플랫폼 선택</h3>
+                </div>
+                <div class="platform-grid">
+                    <div class="platform-card" data-platform="youtube_shorts">
+                        <div class="platform-icon">📺</div>
+                        <div>YouTube Shorts</div>
+                    </div>
+                    <div class="platform-card" data-platform="instagram_reels">
+                        <div class="platform-icon">📷</div>
+                        <div>Instagram Reels</div>
+                    </div>
+                    <div class="platform-card" data-platform="tiktok">
+                        <div class="platform-icon">🎵</div>
+                        <div>TikTok</div>
+                    </div>
+                    <div class="platform-card" data-platform="naver">
+                        <div class="platform-icon">🇰🇷</div>
+                        <div>네이버</div>
+                    </div>
+                    <div class="platform-card" data-platform="facebook_reels">
+                        <div class="platform-icon">👥</div>
+                        <div>Facebook Reels</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 처리 시작 버튼 -->
+            <div class="process-section">
+                <button class="process-btn" id="processBtn" disabled>🚀&nbsp;영상 처리 시작</button>
+            </div>
+
+            <!-- 진행률 표시 -->
+            <div class="progress-section" id="progressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="status-text" id="statusText">처리 중...</div>
+            </div>
+        </div>
+
+        <!-- 오른쪽 패널: 영상 미리보기 및 결과 -->
+        <div class="right-panel">
+            <div id="resultsContainer" style="display: block;">
+                 <div class="title-box">
+                    <h3>✅ 완성된 숏츠 영상</h3>
+                </div>
+                <div id="completedShortsGrid">
+                    <div class="short-item-placeholder">
+                        <p>영상을 처리하면<br>여기에 결과가 표시됩니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 업로드 모달 -->
+    <div class="upload-modal" id="uploadModal">
+        <div class="upload-modal-content">
+            <h3 id="modalTitle">플랫폼 업로드</h3>
+            <form class="upload-form" id="uploadForm">
+                <div class="form-group">
+                    <label for="videoTitle">제목</label>
+                    <input type="text" id="videoTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="videoDescription">설명</label>
+                    <textarea id="videoDescription" placeholder="영상에 대한 설명을 입력하세요..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="videoTags">태그 (쉼표로 구분)</label>
+                    <input type="text" id="videoTags" placeholder="예: 숏츠, 유튜브, 재미있는">
+                </div>
+            </form>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="cancelUpload">취소</button>
+                <button class="modal-btn upload" id="confirmUpload">업로드</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            // Upload related
+            const uploadContainer = document.getElementById('uploadContainer');
+            const fileInput = document.getElementById('file-input');
+
+            // Video Preview related
+            const videoEditorContainer = document.getElementById('videoEditorContainer');
+            const videoPreview = document.getElementById('videoPreview');
+            
+            // Controls and buttons
+            const processBtn = document.getElementById('processBtn');
+            const platformCards = document.querySelectorAll('.platform-card');
+
+            // Results related
+            const resultsContainer = document.getElementById('resultsContainer');
+            const completedShortsGrid = document.getElementById('completedShortsGrid');
+
+            let uploadedFile = null;
+
+            // --- Theme Switching ---
+            function applyInitialTheme() {
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                document.body.classList.toggle('dark-mode', savedTheme === 'dark');
+                themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+            }
+
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+                themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+            });
+
+            applyInitialTheme();
+
+            // --- File Upload Logic ---
+            function handleFile(file) {
+                if (!file || !file.type.startsWith('video/')) {
+                    alert('유효한 비디오 파일을 선택해주세요.');
+                    return;
+                }
+                uploadedFile = file;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    videoPreview.src = e.target.result;
+                    videoPreview.load();
+                };
+                reader.readAsDataURL(file);
+
+                uploadContainer.style.display = 'none';
+                videoEditorContainer.style.display = 'block';
+                updateProcessButtonState();
+            }
+            
+            uploadContainer.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) handleFile(e.target.files[0]);
+            });
+
+            uploadContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadContainer.classList.add('dragover');
+            });
+            uploadContainer.addEventListener('dragleave', () => {
+                uploadContainer.classList.remove('dragover');
+            });
+            uploadContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadContainer.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+            });
+
+            // --- Platform Selection ---
+            platformCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    platformCards.forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    updateProcessButtonState();
+                });
+            });
+
+            function getSelectedPlatform() {
+                return document.querySelector('.platform-card.selected');
+            }
+
+            // --- Process Button State ---
+            function updateProcessButtonState() {
+                processBtn.disabled = !uploadedFile || !getSelectedPlatform();
+            }
+
+            // --- Main Processing Logic ---
+            processBtn.addEventListener('click', () => {
+                if (processBtn.disabled) return;
+                
+                console.log('Processing started...');
+                resultsContainer.style.display = 'block';
+                completedShortsGrid.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">영상을 처리 중입니다...</p>';
+
+                setTimeout(() => {
+                    completedShortsGrid.innerHTML = '';
+                    const shortsCount = document.getElementById('shortsCount').value || 1;
+                    for(let i=0; i < shortsCount; i++) {
+                        const newShort = document.createElement('div');
+                        newShort.className = 'short-item';
+                        newShort.innerHTML = `
+                            <div class="video-container">
+                                <video src="${videoPreview.src}" muted loop></video>
+                                <div class="video-overlay">▶</div>
+                            </div>
+                            <div class="short-info">
+                                <span>Short #${i + 1}</span>
+                                <button class="download-btn">다운로드</button>
+                            </div>`;
+                        completedShortsGrid.appendChild(newShort);
+                    }
+                    
+                    document.querySelectorAll('.short-item .video-container').forEach(container => {
+                        const video = container.querySelector('video');
+                        if (video) {
+                            container.addEventListener('mouseenter', () => video.play().catch(e=>console.error(e)));
+                            container.addEventListener('mouseleave', () => video.pause());
+                        }
+                    });
+                }, 2000);
+            });
+
+            // Set initial state
+            updateProcessButtonState();
+        });
+    </script>
+</body>
+</html>
