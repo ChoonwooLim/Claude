@@ -129,6 +129,7 @@
 
         .right-panel .title-box {
             align-self: center;
+            text-align: center;
         }
 
         .title-box > * {
@@ -145,10 +146,19 @@
             color: var(--text-secondary);
         }
 
-        #theme-toggle {
+        .header-actions {
             position: absolute;
-            top: 0;
+            top: 50%;
             right: 0;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        #theme-toggle {
+            position: static;
+            flex-shrink: 0;
             background: none;
             border: 2px solid var(--border-color);
             color: var(--text-primary);
@@ -773,6 +783,10 @@
             color: var(--text-primary);
         }
 
+        body.dark-mode .setting-input {
+            color: #1a202c; /* Dark text for light inputs in dark mode */
+        }
+
         #videoEditorContainer {
             width: 100%;
             background: #000;
@@ -828,9 +842,24 @@
         .short-info {
             padding: 0.75rem 1rem;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             background: var(--upload-bg);
+            gap: 0.5rem;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background-color: #c82333;
         }
 
         #completedShortsGrid {
@@ -926,9 +955,10 @@
         .short-info {
             padding: 0.75rem 1rem;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             background: var(--upload-bg);
+            gap: 0.5rem;
         }
 
         /* --- Right Panel Chat Styles --- */
@@ -1510,6 +1540,37 @@
             color: var(--text-secondary);
             font-weight: 600;
         }
+
+        .short-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 8px 0;
+            background: var(--upload-bg);
+        }
+
+        .short-controls button {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.2s;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .short-controls button:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .short-controls button.active {
+            color: var(--accent-color);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -1519,9 +1580,11 @@
             <div class="header">
                 <div class="title-box">
                     <h1>🎬 숏츠 자동화 프로그램</h1>
-                    
                 </div>
-                <button id="theme-toggle">🌙</button>
+                <div class="header-actions">
+                    <button id="loadNewVideoButton" class="upload-btn">새 영상 불러오기 📂</button>
+                    <button id="theme-toggle">🌙</button>
+                </div>
             </div>
 
             <!-- 파일 업로드 섹션 -->
@@ -1797,6 +1860,7 @@
             // Controls and buttons
             const processBtn = document.getElementById('processBtn');
             const platformCards = document.querySelectorAll('.platform-card');
+            const loadNewVideoButton = document.getElementById('loadNewVideoButton');
             
             // Results related
             const resultsContainer = document.getElementById('resultsContainer');
@@ -1915,6 +1979,10 @@
                 const isDarkMode = document.body.classList.contains('dark-mode');
                 localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
                 themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+            });
+
+            loadNewVideoButton.addEventListener('click', () => {
+                fileInput.click();
             });
 
             applyInitialTheme();
@@ -2310,14 +2378,17 @@
                                 <div class="progress-bar-fill"></div>
                             </div>
                             <div class="short-info">
-                                <span>#${i + 1} (${startTime}s~${endTime}s)</span>
                                 <button class="download-btn">다운로드</button>
+                                <button class="upload-btn">업로드</button>
+                                <button class="delete-btn">삭제</button>
                             </div>`;
                         
                         const video = newShort.querySelector('video');
                         const volumeBtn = newShort.querySelector('.volume-btn');
                         const progressBarContainer = newShort.querySelector('.progress-bar-container');
                         const progressBarFill = newShort.querySelector('.progress-bar-fill');
+                        const uploadBtn = newShort.querySelector('.upload-btn');
+                        const deleteBtn = newShort.querySelector('.delete-btn');
 
                         // Volume control
                         volumeBtn.addEventListener('click', (e) => {
@@ -2349,6 +2420,31 @@
                             }
                         });
                         
+                        // Upload button opens modal
+                        uploadBtn.addEventListener('click', () => {
+                            const uploadModal = document.getElementById('uploadModal');
+                            uploadModal.classList.add('active');
+                        });
+                        
+                        // Delete button removes the short
+                        deleteBtn.addEventListener('click', () => {
+                            const itemToRemove = deleteBtn.closest('.short-item');
+                            const indexToRemove = allGeneratedShorts.findIndex(item => item === itemToRemove);
+
+                            if (indexToRemove > -1) {
+                                allGeneratedShorts.splice(indexToRemove, 1);
+                                
+                                if (allGeneratedShorts.length === 0) {
+                                    currentShortIndex = 0;
+                                } else {
+                                    if (currentShortIndex >= indexToRemove) {
+                                        currentShortIndex = Math.max(0, currentShortIndex - 1);
+                                    }
+                                }
+                                renderCompletedShorts();
+                            }
+                        });
+
                         allGeneratedShorts.push(newShort);
                     }
                     
