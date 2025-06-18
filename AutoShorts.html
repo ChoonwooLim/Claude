@@ -1115,8 +1115,32 @@
         }
 
         .ai-model-box {
-            justify-content: center;
+            justify-content: space-between;
         }
+        .ai-model-box .chat-input-area {
+            padding: 0;
+            border-top: none;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+        .ai-model-box #chatInput {
+            background-color: #ffffff; /* 흰색 배경 */
+            color: #000000; /* 검은색 폰트 */
+            border: 1px solid #d1d5db; /* 밝은 회색 테두리 */
+        }
+        .ai-model-box #chatInput::placeholder {
+            color: #6b7280; /* 어두운 회색 placeholder */
+        }
+        .ai-model-box #chatInput:focus {
+            border-color: var(--accent-color);
+        }
+        .ai-model-box #sendChatBtn {
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: normal;
+        }
+
         .ai-model-box .ai-model-container {
             display: flex;
             gap: 0.75rem;
@@ -1432,7 +1456,10 @@
                 </div>
     
                 <div class="dark-selection-box ai-model-box">
-                    <h3>🤖&nbsp;AI 모델 선택</h3>
+                    <div class="chat-input-area">
+                        <textarea id="chatInput" placeholder="AI에게 영상 처리를 요청하세요..." rows="1"></textarea>
+                        <button id="sendChatBtn" disabled>전송</button>
+                    </div>
                     <div class="ai-model-container">
                         <select id="mainModelSelect" class="setting-input"></select>
                         <select id="subModelSelect" class="setting-input"></select>
@@ -1475,10 +1502,6 @@
                 </div>
                 <div class="chat-history" id="chatHistory">
                     <!-- Chat messages will be appended here -->
-                </div>
-                <div class="chat-input-area">
-                    <textarea id="chatInput" placeholder="메시지를 입력하세요..." rows="1"></textarea>
-                    <button id="sendChatBtn" disabled>전송</button>
                 </div>
             </div>
         </div>
