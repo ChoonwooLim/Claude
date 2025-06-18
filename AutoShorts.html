@@ -799,8 +799,8 @@
             cursor: pointer;
             aspect-ratio: 9 / 16;
             background-color: #000;
-            max-width: 288px;
             margin: 0 auto;
+            height: auto;
         }
 
         .short-item video {
@@ -885,7 +885,6 @@
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
-            max-width: 292px;
         }
 
         .short-item:hover {
@@ -898,8 +897,8 @@
             cursor: pointer;
             aspect-ratio: 9 / 16;
             background-color: #000;
-            max-width: 288px;
             margin: 0 auto;
+            height: auto;
         }
 
         .short-item video {
@@ -1419,6 +1418,98 @@
         .chat-list-actions button:hover {
             background-color: var(--border-color);
         }
+
+        .shorts-carousel {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            max-width: 360px; /* Set to desired width */
+        }
+
+        .shorts-viewport {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #shortsTrack {
+            display: flex;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
+            display: none; /* Initially hidden */
+        }
+
+        .carousel-btn.prev {
+            left: -50px;
+        }
+
+        .carousel-btn.next {
+            right: -50px;
+        }
+
+        .volume-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .volume-btn:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .progress-bar-container {
+            width: 90%;
+            height: 4px;
+            background-color: #ccc;
+            cursor: pointer;
+            border-radius: 2px;
+            margin: 8px auto 4px auto;
+        }
+        body.dark-mode .progress-bar-container {
+             background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            border-radius: 2px;
+        }
+
+        #shorts-counter {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -1629,12 +1720,18 @@
                 <div class="title-box">
                     <h3>✅ 완성된 숏츠 영상</h3>
                 </div>
-                <div id="completedShortsGrid">
-                    <div class="short-item">
-                        <div class="video-container">
-                             <!-- This is the black, rounded placeholder for the video -->
+                <div class="shorts-carousel">
+                    <button class="carousel-btn prev" id="prevShortBtn">‹</button>
+                    <div class="shorts-viewport">
+                        <div id="shortsTrack">
+                            <!-- JS will populate this -->
                         </div>
                     </div>
+                    <button class="carousel-btn next" id="nextShortBtn">›</button>
+                </div>
+                <div id="shorts-counter"></div>
+                <div id="completedShortsGrid" style="display: none;">
+                    <!-- This is now unused, but kept for safety, will be controlled by JS -->
                 </div>
             </div>
         </div>
@@ -1704,6 +1801,10 @@
             // Results related
             const resultsContainer = document.getElementById('resultsContainer');
             const completedShortsGrid = document.getElementById('completedShortsGrid');
+            const shortsTrack = document.getElementById('shortsTrack');
+            const prevShortBtn = document.getElementById('prevShortBtn');
+            const nextShortBtn = document.getElementById('nextShortBtn');
+            const shortsCounter = document.getElementById('shorts-counter');
 
             // Chat panel elements
             const chatHistory = document.getElementById('chatHistory');
@@ -1722,6 +1823,8 @@
             let uploadedFile = null;
             let chats = [];
             let currentChatId = null;
+            let allGeneratedShorts = [];
+            let currentShortIndex = 0;
 
             // --- AI Model Data & Logic ---
             const aiModels = {
@@ -2096,16 +2199,81 @@
                 e.target.value = ''; 
             });
 
+            // --- Carousel Logic ---
+            function renderCompletedShorts() {
+                shortsTrack.innerHTML = '';
+                if (allGeneratedShorts.length === 0) {
+                    shortsTrack.innerHTML = `<p style="text-align: center; color: var(--text-secondary); padding: 5rem 1rem;">왼쪽의 '영상 처리 시작' 버튼을 눌러 숏츠를 생성해주세요.</p>`;
+                    prevShortBtn.style.display = 'none';
+                    nextShortBtn.style.display = 'none';
+                    shortsCounter.textContent = '';
+                    return;
+                }
+
+                allGeneratedShorts.forEach(shortElement => {
+                    // Each item needs to be wrapped for the carousel
+                    const slide = document.createElement('div');
+                    slide.style.flex = '0 0 100%';
+                    slide.appendChild(shortElement);
+                    shortsTrack.appendChild(slide);
+                });
+
+                updateCarousel();
+            }
+
+            function updateCarousel() {
+                // Move the track
+                const offset = -currentShortIndex * 100;
+                shortsTrack.style.transform = `translateX(${offset}%)`;
+
+                // Update counter
+                shortsCounter.textContent = `${currentShortIndex + 1} / ${allGeneratedShorts.length}`;
+
+                // Update buttons visibility
+                prevShortBtn.style.display = currentShortIndex > 0 ? 'block' : 'none';
+                nextShortBtn.style.display = currentShortIndex < allGeneratedShorts.length - 1 ? 'block' : 'none';
+
+                // Pause all videos first
+                shortsTrack.querySelectorAll('video').forEach(v => v.pause());
+
+                // Autoplay current video on hover
+                const currentSlide = shortsTrack.children[currentShortIndex];
+                if (currentSlide) {
+                    const videoContainer = currentSlide.querySelector('.video-container');
+                    const video = currentSlide.querySelector('video');
+                    if (videoContainer && video) {
+                         videoContainer.addEventListener('mouseenter', () => video.play().catch(e=>console.log("Autoplay failed", e)));
+                         videoContainer.addEventListener('mouseleave', () => video.pause());
+                    }
+                }
+            }
+
+            prevShortBtn.addEventListener('click', () => {
+                if (currentShortIndex > 0) {
+                    currentShortIndex--;
+                    updateCarousel();
+                }
+            });
+
+            nextShortBtn.addEventListener('click', () => {
+                if (currentShortIndex < allGeneratedShorts.length - 1) {
+                    currentShortIndex++;
+                    updateCarousel();
+                }
+            });
+
             // --- Main Processing Logic ---
             processBtn.addEventListener('click', () => {
                 if (processBtn.disabled) return;
                 
                 addMessage('ai', "영상 처리를 시작합니다. 잠시만 기다려주세요...");
 
-                completedShortsGrid.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">영상을 처리 중입니다...</p>';
+                shortsTrack.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 5rem 1rem;">AI가 영상을 분석하고 있습니다...</p>';
+                allGeneratedShorts = [];
+                currentShortIndex = 0;
+                updateCarousel();
 
                 setTimeout(() => {
-                    completedShortsGrid.innerHTML = '';
                     const shortsCount = parseInt(document.getElementById('shortsCount').value, 10) || 1;
                     const shortsLength = parseInt(document.getElementById('shortsLength').value, 10);
                     const originalVideo = document.getElementById('videoPreview');
@@ -2114,17 +2282,17 @@
 
                     if (!videoSrc) {
                        addMessage('ai', '오류: 처리할 원본 영상이 없습니다.');
-                       completedShortsGrid.innerHTML = '<p style="text-align: center; color: var(--error-text);">오류: 처리할 원본 영상이 없습니다.</p>';
+                       shortsTrack.innerHTML = '<p style="text-align: center; color: var(--error-text);">오류: 처리할 원본 영상이 없습니다.</p>';
                        return;
                     }
                     
                     if (isNaN(originalDuration) || originalDuration < shortsLength) {
                         addMessage('ai', `오류: 원본 영상의 길이(${Math.round(originalDuration)}초)가 요청된 숏츠 길이(${shortsLength}초)보다 짧습니다.`);
-                        completedShortsGrid.innerHTML = `<p style="text-align: center; color: var(--error-text);">오류: 원본 영상이 너무 짧습니다. 길이를 다시 설정해주세요.</p>`;
+                        shortsTrack.innerHTML = `<p style="text-align: center; color: var(--error-text);">오류: 원본 영상이 너무 짧습니다. 길이를 다시 설정해주세요.</p>`;
                         return;
                     }
 
-                    for(let i = 0; i < shortsCount; i++) {
+                    for (let i = 0; i < shortsCount; i++) {
                         const maxStartTime = originalDuration - shortsLength;
                         const startTime = Math.floor(Math.random() * maxStartTime);
                         const endTime = startTime + shortsLength;
@@ -2134,31 +2302,65 @@
                         newShort.className = 'short-item';
                         newShort.innerHTML = `
                             <div class="video-container">
-                                <video src="${segmentSrc}" muted loop></video>
+                                <video src="${segmentSrc}" loop preload="metadata"></video>
                                 <div class="video-overlay">▶</div>
+                                <button class="volume-btn">🔊</button>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill"></div>
                             </div>
                             <div class="short-info">
-                                <span>Short #${i + 1} (${startTime}s~${endTime}s)</span>
+                                <span>#${i + 1} (${startTime}s~${endTime}s)</span>
                                 <button class="download-btn">다운로드</button>
                             </div>`;
-                        completedShortsGrid.appendChild(newShort);
+                        
+                        const video = newShort.querySelector('video');
+                        const volumeBtn = newShort.querySelector('.volume-btn');
+                        const progressBarContainer = newShort.querySelector('.progress-bar-container');
+                        const progressBarFill = newShort.querySelector('.progress-bar-fill');
+
+                        // Volume control
+                        volumeBtn.addEventListener('click', (e) => {
+                            e.stopPropagation(); // Prevent container's hover effects
+                            if (video.muted) {
+                                video.muted = false;
+                                volumeBtn.textContent = '🔊';
+                            } else {
+                                video.muted = true;
+                                volumeBtn.textContent = '🔇';
+                            }
+                        });
+
+                        // Progress bar update
+                        video.addEventListener('timeupdate', () => {
+                            if (video.duration) {
+                                const progressPercent = (video.currentTime / video.duration) * 100;
+                                progressBarFill.style.width = `${progressPercent}%`;
+                            }
+                        });
+
+                        // Seek on progress bar click
+                        progressBarContainer.addEventListener('click', (e) => {
+                            const rect = progressBarContainer.getBoundingClientRect();
+                            const clickX = e.clientX - rect.left;
+                            const width = progressBarContainer.clientWidth;
+                            if (video.duration) {
+                                video.currentTime = (clickX / width) * video.duration;
+                            }
+                        });
+                        
+                        allGeneratedShorts.push(newShort);
                     }
                     
-                    document.querySelectorAll('.short-item .video-container').forEach(container => {
-                        const video = container.querySelector('video');
-                        if (video) {
-                            container.addEventListener('mouseenter', () => video.play().catch(e=>console.log("Autoplay failed", e)));
-                            container.addEventListener('mouseleave', () => video.pause());
-                        }
-                    });
-
-                    addMessage('ai', `${shortsCount}개의 숏츠 영상이 완성되었습니다. 위에서 확인해주세요!`);
+                    renderCompletedShorts();
+                    addMessage('ai', `${shortsCount}개의 숏츠 영상이 완성되었습니다. 오른쪽 결과 패널에서 확인해주세요!`);
 
                 }, 2000);
             });
 
             // --- Initial Setup ---
             loadChats();
+            renderCompletedShorts();
             initializeMainModels();
             updateSubModels();
             updateProcessButtonState();
