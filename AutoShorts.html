@@ -1307,34 +1307,117 @@
         }
 
         .left-panel .chat-panel {
+            flex: 7;
+            margin-bottom: 0;
+            max-height: none;
+        }
+
+        .chat-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            height: 450px;
+        }
+
+        .chat-list-panel {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 15px;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 2rem;
-            max-height: 400px; /* Limit chat history height */
         }
-        .left-panel .chat-header {
+
+        .chat-list-header {
             padding: 1rem 1.5rem;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
-        .left-panel .chat-header h3 {
-             margin: 0;
+
+        .chat-list-header h3 {
+            margin: 0;
             font-size: 1.2rem;
             color: var(--text-primary);
         }
-        .left-panel .chat-history {
+        
+        #selectAllChats {
+             width: 16px;
+             height: 16px;
+        }
+
+        .chat-list {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 1.5rem;
+            padding: 1rem;
+        }
+
+        .chat-list-item {
             display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .chat-list-item:hover {
+            background-color: var(--upload-bg);
+        }
+
+        .chat-list-item.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-hover);
+        }
+
+        .chat-list-item input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+        }
+
+        .chat-list-item-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+            padding-left: 0.5rem; /* Add some space between checkbox and text */
+        }
+        
+        .chat-list-item-title:hover {
+            text-decoration: underline;
+        }
+
+
+        .chat-list-actions {
+            padding: 0.75rem;
+            border-top: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .chat-list-actions button {
+            padding: 0.6rem;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--upload-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 1rem;
+        }
+
+        .chat-list-actions button:hover {
+            background-color: var(--border-color);
         }
     </style>
 </head>
@@ -1459,13 +1542,31 @@
                 </div>
             </div>
 
-            <div class="chat-panel">
-                <div class="chat-header">
-                    <h3>AI 어시스턴트</h3>
-                    <button id="newChatBtn">새 대화</button>
+            <div class="chat-area">
+                <div class="chat-list-panel">
+                    <div class="chat-list-header">
+                        <h3>대화 목록</h3>
+                        <input type="checkbox" id="selectAllChats" title="전체 선택">
+                    </div>
+                    <div class="chat-list" id="chatList">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div class="chat-list-actions">
+                        <button id="saveChatsBtn" title="모든 대화 저장">💾 저장</button>
+                        <button id="loadChatsBtn" title="파일에서 불러오기">📂 불러오기</button>
+                        <input type="file" id="loadChatsInput" style="display: none;" accept=".json">
+                        <button id="deleteChatsBtn" title="선택 대화 삭제">🗑️ 삭제</button>
+                    </div>
                 </div>
-                <div class="chat-history" id="chatHistory">
-                    <!-- Chat messages will be appended here -->
+
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <h3>AI 어시스턴트</h3>
+                        <button id="newChatBtn">새 대화</button>
+                    </div>
+                    <div class="chat-history" id="chatHistory">
+                        <!-- Chat messages will be appended here -->
+                    </div>
                 </div>
             </div>
 
@@ -1609,6 +1710,14 @@
             const chatInput = document.getElementById('chatInput');
             const sendChatBtn = document.getElementById('sendChatBtn');
             const newChatBtn = document.getElementById('newChatBtn');
+
+            // Chat List elements
+            const chatList = document.getElementById('chatList');
+            const selectAllChats = document.getElementById('selectAllChats');
+            const saveChatsBtn = document.getElementById('saveChatsBtn');
+            const loadChatsBtn = document.getElementById('loadChatsBtn');
+            const loadChatsInput = document.getElementById('loadChatsInput');
+            const deleteChatsBtn = document.getElementById('deleteChatsBtn');
 
             let uploadedFile = null;
             let chats = [];
@@ -1833,15 +1942,15 @@
                     if (lastChat) {
                         currentChatId = lastChat.id;
                     } else {
-                        startNewChat();
+                        startNewChat(false); // Don't save yet
                     }
                 } else {
-                    startNewChat();
+                    startNewChat(false); // Don't save yet
                 }
-                renderChatHistory();
+                renderAll();
             }
 
-            function startNewChat() {
+            function startNewChat(doSave = true) {
                 const newChat = {
                     id: Date.now(),
                     messages: [
@@ -1850,11 +1959,142 @@
                 };
                 chats.push(newChat);
                 currentChatId = newChat.id;
-                saveChats();
+                if (doSave) {
+                   saveChats();
+                }
+                renderAll();
+            }
+
+            newChatBtn.addEventListener('click', () => startNewChat());
+
+            function renderAll() {
+                renderChatList();
                 renderChatHistory();
             }
 
-            newChatBtn.addEventListener('click', startNewChat);
+            // --- Chat List Logic ---
+            function renderChatList() {
+                chatList.innerHTML = '';
+                if (chats.length === 0) {
+                    chatList.innerHTML = `<p style="text-align:center; color: var(--text-secondary); padding: 1rem;">대화 기록이 없습니다.</p>`;
+                    return;
+                }
+
+                chats.forEach(chat => {
+                    const item = document.createElement('div');
+                    item.className = 'chat-list-item';
+                    item.dataset.chatId = chat.id;
+                    if (chat.id === currentChatId) {
+                        item.classList.add('active');
+                    }
+
+                    const firstUserMessage = chat.messages.find(m => m.sender === 'user');
+                    const title = firstUserMessage ? firstUserMessage.text : (chat.messages[0]?.text || '새 대화');
+
+                    item.innerHTML = `
+                        <input type="checkbox" class="chat-select-checkbox" data-chat-id="${chat.id}">
+                        <span class="chat-list-item-title">${title}</span>
+                    `;
+
+                    item.querySelector('.chat-list-item-title').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        currentChatId = chat.id;
+                        renderAll();
+                    });
+
+                    chatList.appendChild(item);
+                });
+            }
+
+            function getSelectedChatIds() {
+                const selected = [];
+                document.querySelectorAll('.chat-select-checkbox:checked').forEach(cb => {
+                    selected.push(Number(cb.dataset.chatId));
+                });
+                return selected;
+            }
+
+            selectAllChats.addEventListener('change', (e) => {
+                document.querySelectorAll('.chat-select-checkbox').forEach(cb => {
+                    cb.checked = e.target.checked;
+                });
+            });
+
+            deleteChatsBtn.addEventListener('click', () => {
+                const idsToDelete = getSelectedChatIds();
+                if (idsToDelete.length === 0) {
+                    alert('삭제할 대화를 선택해주세요.');
+                    return;
+                }
+                
+                if (!confirm(`${idsToDelete.length}개의 대화를 정말 삭제하시겠습니까?`)) {
+                    return;
+                }
+
+                chats = chats.filter(chat => !idsToDelete.includes(chat.id));
+
+                if (idsToDelete.includes(currentChatId)) {
+                    currentChatId = chats.length > 0 ? chats[0].id : null;
+                    if (!currentChatId) {
+                        startNewChat(false); // Don't save yet, will be saved below
+                    }
+                }
+                
+                saveChats();
+                renderAll();
+            });
+
+            function downloadJSON(data, filename) {
+                const jsonStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            saveChatsBtn.addEventListener('click', () => {
+                downloadJSON(chats, 'all_chats.json');
+            });
+            
+            loadChatsBtn.addEventListener('click', () => {
+                loadChatsInput.click();
+            });
+
+            loadChatsInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const loadedChats = JSON.parse(event.target.result);
+                        if (Array.isArray(loadedChats)) {
+                            // Basic validation
+                            const validChats = loadedChats.filter(c => c.id && Array.isArray(c.messages));
+                            const existingIds = new Set(chats.map(c => c.id));
+                            const newChats = validChats.filter(c => !existingIds.has(c.id));
+                            
+                            chats.push(...newChats);
+                            saveChats();
+                            renderAll();
+                            alert(`${newChats.length}개의 새 대화를 불러왔습니다.`);
+                        } else {
+                            throw new Error('Invalid chat file format.');
+                        }
+                    } catch (err) {
+                        alert('대화 파일을 불러오는 중 오류가 발생했습니다.');
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(file);
+                // Reset input value to allow loading the same file again
+                e.target.value = ''; 
+            });
 
             // --- Main Processing Logic ---
             processBtn.addEventListener('click', () => {
