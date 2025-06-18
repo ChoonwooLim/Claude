@@ -303,7 +303,7 @@
             width: 100%;
         }
 
-        .platform-group, .llm-group {
+        .platform-group {
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap; /* 창 크기가 줄어들면 줄바꿈 되도록 */
@@ -812,6 +812,17 @@
 
         .short-item .video-overlay {
             position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.7);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .short-item .video-container:hover .video-overlay {
+            opacity: 1;
         }
 
         .short-info {
@@ -830,6 +841,44 @@
             justify-items: center;
         }
 
+        .selection-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: stretch;
+        }
+
+        .dark-selection-box {
+            --card-bg: #2c3e50;
+            --card-border: #405560;
+            --text-primary: #e0e0e0;
+            --accent-color: #00897b;
+            background: #2a3f34;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .selection-container .dark-selection-box:first-child {
+            flex: 6;
+        }
+        
+        .selection-container .dark-selection-box:last-child {
+            flex: 4;
+        }
+
+        .dark-selection-box h3 {
+            color: var(--text-primary);
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
         .short-item {
             border: 1px solid var(--card-border);
             border-radius: 12px;
@@ -844,38 +893,206 @@
             box-shadow: 0 6px 12px rgba(0,0,0,0.08);
         }
 
+        .short-item .video-container {
+            position: relative;
+            cursor: pointer;
+            aspect-ratio: 9 / 16;
+            background-color: #000;
+            max-width: 288px;
+            margin: 0 auto;
+        }
+
+        .short-item video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+        
+        .short-item .video-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.7);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .short-item .video-container:hover .video-overlay {
+            opacity: 1;
+        }
+
+        .short-info {
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--upload-bg);
+        }
+
+        /* --- Right Panel Chat Styles --- */
+        .chat-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            overflow: hidden; /* 자식 요소가 부모를 넘지 않도록 */
+            min-height: 0; /* flex-grow가 제대로 작동하기 위해 필요 */
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        #newChatBtn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #newChatBtn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .chat-history {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 85%;
+        }
+
+        .chat-message .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .chat-message .message-content {
+            background-color: var(--upload-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 15px;
+            color: var(--text-secondary);
+        }
+        
+        .chat-message .message-content p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .user-message .message-content {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+        }
+
+        .chat-input-area {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 1rem;
+        }
+
+        #chatInput {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            resize: none;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        #chatInput:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        #sendChatBtn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        #sendChatBtn:disabled {
+             background: var(--btn-disabled-bg);
+             cursor: not-allowed;
+        }
+
         .right-panel {
             display: flex;
             flex-direction: column;
             height: 100%;
+            gap: 2rem; /* 섹션 사이 간격 */
         }
 
         #resultsContainer {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+            flex-shrink: 0;
         }
 
         .selection-container {
             display: flex;
             gap: 1.5rem;
             margin-bottom: 2rem;
-            align-items: stretch; /* stretch로 변경하여 높이를 맞춤 */
+            align-items: stretch;
         }
 
         .dark-selection-box {
-             /* Override theme variables for this section to mimic dark mode */
             --card-bg: #2c3e50;
             --card-border: #405560;
             --text-primary: #e0e0e0;
             --accent-color: #00897b;
-
             background: #2a3f34;
             border: 1px solid var(--card-border);
             border-radius: 12px;
             padding: 1.5rem;
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-            flex: 1; /* 컨테이너 내에서 동일한 너비를 가지도록 함 */
             display: flex;
             flex-direction: column;
         }
@@ -889,14 +1106,14 @@
             align-items: center;
         }
 
-        .platform-group {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap; /* 창 크기가 줄어들면 줄바꿈 되도록 */
-            align-items: center;
+        #completedShortsGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(292px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+            justify-items: center;
         }
 
-        /* --- AI Model Selection Styles --- */
         .ai-model-box {
             justify-content: center;
         }
@@ -904,7 +1121,8 @@
             display: flex;
             gap: 0.75rem;
             align-items: center;
-            width: 100%;
+            width: 90%;
+            margin: 0 auto;
         }
         
         .ai-model-container .setting-input {
@@ -1062,11 +1280,6 @@
         @keyframes slideIn {
             from {transform: translateY(-50px);}
             to {transform: translateY(0);}
-        }
-
-        .completed-shorts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         }
     </style>
 </head>
@@ -1241,7 +1454,7 @@
             </div>
         </div>
 
-        <!-- 오른쪽 패널: 영상 미리보기 및 결과 -->
+        <!-- 오른쪽 패널: 결과 및 AI 대화 -->
         <div class="right-panel">
             <div id="resultsContainer">
                 <div class="title-box">
@@ -1250,9 +1463,22 @@
                 <div id="completedShortsGrid">
                     <div class="short-item">
                         <div class="video-container">
-                            <!-- This is the black, rounded placeholder for the video -->
+                             <!-- This is the black, rounded placeholder for the video -->
                         </div>
                     </div>
+                </div>
+            </div>
+            <div class="chat-panel">
+                <div class="chat-header">
+                    <h3>AI 어시스턴트</h3>
+                    <button id="newChatBtn">새 대화</button>
+                </div>
+                <div class="chat-history" id="chatHistory">
+                    <!-- Chat messages will be appended here -->
+                </div>
+                <div class="chat-input-area">
+                    <textarea id="chatInput" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+                    <button id="sendChatBtn" disabled>전송</button>
                 </div>
             </div>
         </div>
@@ -1287,7 +1513,7 @@
     <div id="apiKeyModal" class="api-key-modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h3 id="modalTitle">API 키 설정</h3>
+            <h3 id="apiKeyModalTitle">API 키 설정</h3>
             <div class="form-group">
                 <div class="form-label-group">
                     <label for="apiKeyInput">API 키</label>
@@ -1323,7 +1549,15 @@
             const resultsContainer = document.getElementById('resultsContainer');
             const completedShortsGrid = document.getElementById('completedShortsGrid');
 
+            // Chat panel elements
+            const chatHistory = document.getElementById('chatHistory');
+            const chatInput = document.getElementById('chatInput');
+            const sendChatBtn = document.getElementById('sendChatBtn');
+            const newChatBtn = document.getElementById('newChatBtn');
+
             let uploadedFile = null;
+            let chats = [];
+            let currentChatId = null;
 
             // --- AI Model Data & Logic ---
             const aiModels = {
@@ -1339,7 +1573,7 @@
             
             // API Key Modal Elements
             const apiKeyModal = document.getElementById('apiKeyModal');
-            const modalTitle = document.getElementById('modalTitle');
+            const apiKeyModalTitle = document.getElementById('apiKeyModalTitle');
             const apiKeyInput = document.getElementById('apiKeyInput');
             const apiKeyLink = document.getElementById('apiKeyLink');
             const saveApiKeyBtn = document.getElementById('saveApiKey');
@@ -1377,7 +1611,7 @@
                 const selectedModelKey = mainModelSelect.value;
                 const modelData = aiModels[selectedModelKey];
                 
-                modalTitle.textContent = `${modelData.name} API 키 설정`;
+                apiKeyModalTitle.textContent = `${modelData.name} API 키 설정`;
                 apiKeyInput.value = modelData.apiKey || '';
                 apiKeyLink.href = modelData.apiKeyUrl;
 
@@ -1472,28 +1706,144 @@
             function updateProcessButtonState() {
                 const platformsSelected = getSelectedPlatforms().length > 0;
                 processBtn.disabled = !uploadedFile || !platformsSelected;
+                sendChatBtn.disabled = chatInput.value.trim() === '';
             }
+
+            // --- Chat Panel Logic ---
+            function renderChatHistory() {
+                chatHistory.innerHTML = '';
+                const currentChat = chats.find(chat => chat.id === currentChatId);
+                if (!currentChat) return;
+
+                currentChat.messages.forEach(msg => {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('chat-message', `${msg.sender}-message`);
+
+                    const avatar = `<div class="avatar">${msg.sender === 'ai' ? '🤖' : '👤'}</div>`;
+                    const content = `<div class="message-content"><p>${msg.text}</p></div>`;
+                    
+                    messageElement.innerHTML = avatar + content;
+                    chatHistory.appendChild(messageElement);
+                });
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+
+            function addMessage(sender, text) {
+                const currentChat = chats.find(chat => chat.id === currentChatId);
+                if (currentChat) {
+                    currentChat.messages.push({ sender, text });
+                    saveChats();
+                    renderChatHistory();
+                }
+            }
+
+            function handleSendMessage() {
+                const text = chatInput.value.trim();
+                if (text) {
+                    addMessage('user', text);
+                    chatInput.value = '';
+                    updateProcessButtonState();
+
+                    // Simulate AI response
+                    setTimeout(() => {
+                        let aiResponse = "죄송합니다. 아직 해당 기능은 준비중입니다. 왼쪽의 '영상 처리 시작' 버튼을 이용해주세요.";
+                        if (text.includes("처리 시작") || text.includes("만들어줘")) {
+                             aiResponse = "네, 알겠습니다. 왼쪽 패널의 설정을 기반으로 영상 처리를 시작합니다.";
+                             processBtn.click();
+                        }
+                        addMessage('ai', aiResponse);
+                    }, 1000);
+                }
+            }
+            
+            sendChatBtn.addEventListener('click', handleSendMessage);
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+            });
+             chatInput.addEventListener('input', updateProcessButtonState);
+
+            // Chat Management
+            function saveChats() {
+                localStorage.setItem('autoshorts_chats', JSON.stringify(chats));
+            }
+
+            function loadChats() {
+                const savedChats = localStorage.getItem('autoshorts_chats');
+                if (savedChats) {
+                    chats = JSON.parse(savedChats);
+                    const lastChat = chats[chats.length - 1];
+                    if (lastChat) {
+                        currentChatId = lastChat.id;
+                    } else {
+                        startNewChat();
+                    }
+                } else {
+                    startNewChat();
+                }
+                renderChatHistory();
+            }
+
+            function startNewChat() {
+                const newChat = {
+                    id: Date.now(),
+                    messages: [
+                        { sender: 'ai', text: '안녕하세요! 숏츠 영상 제작을 도와드릴 AI 어시스턴트입니다. 왼쪽에 있는 옵션을 설정하고, 저에게 제작을 요청해주세요.' }
+                    ]
+                };
+                chats.push(newChat);
+                currentChatId = newChat.id;
+                saveChats();
+                renderChatHistory();
+            }
+
+            newChatBtn.addEventListener('click', startNewChat);
 
             // --- Main Processing Logic ---
             processBtn.addEventListener('click', () => {
                 if (processBtn.disabled) return;
                 
-                console.log('Processing started...');
+                addMessage('ai', "영상 처리를 시작합니다. 잠시만 기다려주세요...");
+
                 completedShortsGrid.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">영상을 처리 중입니다...</p>';
 
                 setTimeout(() => {
                     completedShortsGrid.innerHTML = '';
-                    const shortsCount = document.getElementById('shortsCount').value || 1;
-                    for(let i=0; i < shortsCount; i++) {
+                    const shortsCount = parseInt(document.getElementById('shortsCount').value, 10) || 1;
+                    const shortsLength = parseInt(document.getElementById('shortsLength').value, 10);
+                    const originalVideo = document.getElementById('videoPreview');
+                    const videoSrc = originalVideo.src;
+                    const originalDuration = originalVideo.duration;
+
+                    if (!videoSrc) {
+                       addMessage('ai', '오류: 처리할 원본 영상이 없습니다.');
+                       completedShortsGrid.innerHTML = '<p style="text-align: center; color: var(--error-text);">오류: 처리할 원본 영상이 없습니다.</p>';
+                       return;
+                    }
+                    
+                    if (isNaN(originalDuration) || originalDuration < shortsLength) {
+                        addMessage('ai', `오류: 원본 영상의 길이(${Math.round(originalDuration)}초)가 요청된 숏츠 길이(${shortsLength}초)보다 짧습니다.`);
+                        completedShortsGrid.innerHTML = `<p style="text-align: center; color: var(--error-text);">오류: 원본 영상이 너무 짧습니다. 길이를 다시 설정해주세요.</p>`;
+                        return;
+                    }
+
+                    for(let i = 0; i < shortsCount; i++) {
+                        const maxStartTime = originalDuration - shortsLength;
+                        const startTime = Math.floor(Math.random() * maxStartTime);
+                        const endTime = startTime + shortsLength;
+                        const segmentSrc = `${videoSrc}#t=${startTime},${endTime}`;
+                        
                         const newShort = document.createElement('div');
                         newShort.className = 'short-item';
                         newShort.innerHTML = `
                             <div class="video-container">
-                                <video src="${videoPreview.src}" muted loop></video>
+                                <video src="${segmentSrc}" muted loop></video>
                                 <div class="video-overlay">▶</div>
                             </div>
                             <div class="short-info">
-                                <span>Short #${i + 1}</span>
+                                <span>Short #${i + 1} (${startTime}s~${endTime}s)</span>
                                 <button class="download-btn">다운로드</button>
                             </div>`;
                         completedShortsGrid.appendChild(newShort);
@@ -1502,14 +1852,18 @@
                     document.querySelectorAll('.short-item .video-container').forEach(container => {
                         const video = container.querySelector('video');
                         if (video) {
-                            container.addEventListener('mouseenter', () => video.play().catch(e=>console.error(e)));
+                            container.addEventListener('mouseenter', () => video.play().catch(e=>console.log("Autoplay failed", e)));
                             container.addEventListener('mouseleave', () => video.pause());
                         }
                     });
+
+                    addMessage('ai', `${shortsCount}개의 숏츠 영상이 완성되었습니다. 위에서 확인해주세요!`);
+
                 }, 2000);
             });
 
-            // Set initial state
+            // --- Initial Setup ---
+            loadChats();
             initializeMainModels();
             updateSubModels();
             updateProcessButtonState();
