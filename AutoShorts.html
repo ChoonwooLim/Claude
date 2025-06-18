@@ -296,9 +296,50 @@
 
         .platform-grid {
             display: flex;
-            gap: 0.75rem;
-            justify-content: center;
+            align-items: stretch;
+            justify-content: space-between;
             flex-wrap: nowrap;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .platform-group, .llm-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap; /* 창 크기가 줄어들면 줄바꿈 되도록 */
+            align-items: center;
+        }
+
+        .llm-group {
+            padding-left: 1.5rem;
+            border-left: 1px solid var(--card-border);
+        }
+
+        .llm-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .llm-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .llm-card.selected {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .platform-empty-space {
+            display: none; /* 이제 사용하지 않음 */
         }
 
         .platform-card {
@@ -814,6 +855,219 @@
             flex-direction: column;
             height: 100%;
         }
+
+        .selection-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: stretch; /* stretch로 변경하여 높이를 맞춤 */
+        }
+
+        .dark-selection-box {
+             /* Override theme variables for this section to mimic dark mode */
+            --card-bg: #2c3e50;
+            --card-border: #405560;
+            --text-primary: #e0e0e0;
+            --accent-color: #00897b;
+
+            background: #2a3f34;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            flex: 1; /* 컨테이너 내에서 동일한 너비를 가지도록 함 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dark-selection-box h3 {
+            color: var(--text-primary);
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .platform-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap; /* 창 크기가 줄어들면 줄바꿈 되도록 */
+            align-items: center;
+        }
+
+        /* --- AI Model Selection Styles --- */
+        .ai-model-box {
+            justify-content: center;
+        }
+        .ai-model-box .ai-model-container {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .ai-model-container .setting-input {
+            color: #1a202c; /* 검은색 텍스트 */
+            background-color: #ffffff; /* 흰색 배경 */
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 0.65rem;
+            font-size: 0.9rem;
+            flex-grow: 1;
+        }
+
+        .ai-model-container .setting-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(0, 137, 123, 0.2);
+        }
+
+        .ai-model-container .settings-btn {
+            background: none;
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .ai-model-container .settings-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-color);
+        }
+
+        /* --- API Key Modal Styles --- */
+        .api-key-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            animation: fadeIn 0.3s;
+        }
+
+        .api-key-modal .modal-content {
+            background-color: #fefefe;
+            color: #1a202c;
+            margin: 15% auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+
+        .api-key-modal .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .api-key-modal .close-button:hover,
+        .api-key-modal .close-button:focus {
+            color: black;
+            text-decoration: none;
+        }
+
+        .api-key-modal h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .api-key-modal .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .api-key-modal .form-label-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .api-key-modal .form-label-group label {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .api-key-modal #apiKeyLink {
+            font-size: 0.85rem;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .api-key-modal #apiKeyLink:hover {
+            text-decoration: underline;
+        }
+
+        .api-key-modal .form-group-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .api-key-modal .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .api-key-modal .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .api-key-modal .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .api-key-modal .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .api-key-modal .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .api-key-modal .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        @keyframes slideIn {
+            from {transform: translateY(-50px);}
+            to {transform: translateY(0);}
+        }
+
+        .completed-shorts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        }
     </style>
 </head>
 <body>
@@ -937,27 +1191,39 @@
                 </div>
             </div>
 
-            <div class="platform-selection">
-                <div class="platform-grid">
-                    <div class="platform-card" data-platform="youtube_shorts">
-                        <div class="platform-icon">📺</div>
-                        YouTube Shorts
+            <div class="selection-container">
+                <div class="dark-selection-box">
+                    <h3>🌐&nbsp;플랫폼 선택</h3>
+                    <div class="platform-group">
+                        <div class="platform-card" data-platform="youtube_shorts">
+                            <div class="platform-icon">📺</div>
+                            YouTube Shorts
+                        </div>
+                        <div class="platform-card" data-platform="instagram_reels">
+                            <div class="platform-icon">📸</div>
+                            Instagram Reels
+                        </div>
+                        <div class="platform-card" data-platform="tiktok">
+                            <div class="platform-icon">🎵</div>
+                            TikTok
+                        </div>
+                        <div class="platform-card" data-platform="naver">
+                            <div class="platform-icon">KR</div>
+                            네이버
+                        </div>
+                        <div class="platform-card" data-platform="facebook_reels">
+                            <div class="platform-icon">👥</div>
+                            Facebook Reels
+                        </div>
                     </div>
-                    <div class="platform-card" data-platform="instagram_reels">
-                        <div class="platform-icon">📸</div>
-                        Instagram Reels
-                    </div>
-                    <div class="platform-card" data-platform="tiktok">
-                        <div class="platform-icon">🎵</div>
-                        TikTok
-                    </div>
-                    <div class="platform-card" data-platform="naver">
-                        <div class="platform-icon">KR</div>
-                        네이버
-                    </div>
-                    <div class="platform-card" data-platform="facebook_reels">
-                        <div class="platform-icon">👥</div>
-                        Facebook Reels
+                </div>
+    
+                <div class="dark-selection-box ai-model-box">
+                    <h3>🤖&nbsp;AI 모델 선택</h3>
+                    <div class="ai-model-container">
+                        <select id="mainModelSelect" class="setting-input"></select>
+                        <select id="subModelSelect" class="setting-input"></select>
+                        <button class="settings-btn" id="apiSettingsBtn" title="API 키 설정">⚙️</button>
                     </div>
                 </div>
             </div>
@@ -1017,6 +1283,25 @@
         </div>
     </div>
 
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="api-key-modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 id="modalTitle">API 키 설정</h3>
+            <div class="form-group">
+                <div class="form-label-group">
+                    <label for="apiKeyInput">API 키</label>
+                    <a href="#" id="apiKeyLink" target="_blank" rel="noopener noreferrer">API 키 발급받기 &nearr;</a>
+                </div>
+                <input type="password" id="apiKeyInput" class="form-group-input">
+            </div>
+            <div class="modal-actions">
+                <button id="cancelApiKey" class="btn btn-secondary">취소</button>
+                <button id="saveApiKey" class="btn btn-primary">저장</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // DOM Elements
@@ -1033,12 +1318,89 @@
             // Controls and buttons
             const processBtn = document.getElementById('processBtn');
             const platformCards = document.querySelectorAll('.platform-card');
-
+            
             // Results related
             const resultsContainer = document.getElementById('resultsContainer');
             const completedShortsGrid = document.getElementById('completedShortsGrid');
 
             let uploadedFile = null;
+
+            // --- AI Model Data & Logic ---
+            const aiModels = {
+                claude: { name: "Claude", subModels: ["Claude 3 Opus", "Claude 3 Sonnet", "Claude 3 Haiku"], apiKey: "", apiKeyUrl: "https://console.anthropic.com/settings/keys" },
+                gpt: { name: "GPT", subModels: ["GPT-4 Turbo", "GPT-4", "GPT-3.5 Turbo"], apiKey: "", apiKeyUrl: "https://platform.openai.com/api-keys" },
+                gemini: { name: "Gemini", subModels: ["Gemini 1.5 Pro", "Gemini 1.0 Pro"], apiKey: "", apiKeyUrl: "https://aistudio.google.com/app/api-keys" },
+                llama: { name: "Llama", subModels: ["Llama 3 70B", "Llama 3 8B", "Llama 2 70B"], apiKey: "", apiKeyUrl: "https://console.groq.com/keys" }
+            };
+
+            const mainModelSelect = document.getElementById('mainModelSelect');
+            const subModelSelect = document.getElementById('subModelSelect');
+            const apiSettingsBtn = document.getElementById('apiSettingsBtn');
+            
+            // API Key Modal Elements
+            const apiKeyModal = document.getElementById('apiKeyModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const apiKeyLink = document.getElementById('apiKeyLink');
+            const saveApiKeyBtn = document.getElementById('saveApiKey');
+            const cancelApiKeyBtn = document.getElementById('cancelApiKey');
+            const closeBtn = apiKeyModal.querySelector('.close-button');
+            let currentEditingModel = null;
+
+            function initializeMainModels() {
+                mainModelSelect.innerHTML = '';
+                for (const key in aiModels) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = aiModels[key].name;
+                    mainModelSelect.appendChild(option);
+                }
+            }
+
+            function updateSubModels() {
+                const selectedModelKey = mainModelSelect.value;
+                const subModels = aiModels[selectedModelKey].subModels;
+                
+                subModelSelect.innerHTML = '';
+                subModels.forEach(modelName => {
+                    const option = document.createElement('option');
+                    option.value = modelName;
+                    option.textContent = modelName;
+                    subModelSelect.appendChild(option);
+                });
+            }
+            
+            mainModelSelect.addEventListener('change', updateSubModels);
+
+            // --- API Key Modal Logic ---
+            apiSettingsBtn.addEventListener('click', () => {
+                const selectedModelKey = mainModelSelect.value;
+                const modelData = aiModels[selectedModelKey];
+                
+                modalTitle.textContent = `${modelData.name} API 키 설정`;
+                apiKeyInput.value = modelData.apiKey || '';
+                apiKeyLink.href = modelData.apiKeyUrl;
+
+                apiKeyModal.style.display = 'block';
+                
+                currentEditingModel = selectedModelKey;
+            });
+
+            function closeApiKeyModal() {
+                 apiKeyModal.style.display = 'none';
+            }
+
+            closeBtn.addEventListener('click', closeApiKeyModal);
+            cancelApiKeyBtn.addEventListener('click', closeApiKeyModal);
+            
+            saveApiKeyBtn.addEventListener('click', () => {
+                if (currentEditingModel) {
+                    aiModels[currentEditingModel].apiKey = apiKeyInput.value;
+                    console.log(`${aiModels[currentEditingModel].name} API Key saved.`); // For debugging
+                    alert(`${aiModels[currentEditingModel].name} API 키가 저장되었습니다.`);
+                    closeApiKeyModal();
+                }
+            });
 
             // --- Theme Switching ---
             function applyInitialTheme() {
@@ -1108,7 +1470,8 @@
 
             // --- Process Button State ---
             function updateProcessButtonState() {
-                processBtn.disabled = !uploadedFile || getSelectedPlatforms().length === 0;
+                const platformsSelected = getSelectedPlatforms().length > 0;
+                processBtn.disabled = !uploadedFile || !platformsSelected;
             }
 
             // --- Main Processing Logic ---
@@ -1147,6 +1510,8 @@
             });
 
             // Set initial state
+            initializeMainModels();
+            updateSubModels();
             updateProcessButtonState();
         });
     </script>
