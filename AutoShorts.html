@@ -6,10 +6,10 @@
     <title>숏츠 자동화 프로그램 - UI</title>
     <style>
         :root {
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-gradient: linear-gradient(135deg, #d3d9e2 0%, #a8b4c2 100%);
             --panel-bg: rgba(255, 255, 255, 0.95);
-            --text-primary: #333;
-            --text-secondary: #666;
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
             --border-color: #e2e8f0;
             --accent-color: #667eea;
             --accent-hover: #5a67d8;
@@ -83,11 +83,7 @@
             background: var(--panel-bg);
             border-radius: 20px;
             padding: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            min-width: 300px; /* Prevent panels from becoming too small */
-            overflow: auto; /* Add scroll for smaller sizes */
-            transition: background 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
         
         .resizer {
@@ -104,7 +100,7 @@
 
         .header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 0.5rem;
             position: relative;
         }
 
@@ -112,7 +108,7 @@
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 12px;
-            padding: 1rem 1.5rem;
+            padding: 0.8rem 1.5rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
         
@@ -123,12 +119,16 @@
         .header .title-box {
             display: inline-block;
             text-align: center;
-            padding: 1.5rem 2.5rem;
+            padding: 0.8rem 1.5rem;
         }
         
         .left-panel .title-box,
         .right-panel .title-box {
             margin-bottom: 1.5rem;
+        }
+
+        .right-panel .title-box {
+            align-self: center;
         }
 
         .title-box > * {
@@ -137,7 +137,8 @@
         }
 
         .title-box h1 {
-            margin-bottom: 0.25rem;
+            font-size: 1.5rem;
+            margin: 0;
         }
         
         .title-box p {
@@ -169,31 +170,43 @@
         }
 
         .upload-section {
-            background: var(--upload-bg);
-            border: 2px dashed var(--upload-border);
+            background: #000;
+            border: none;
+            aspect-ratio: 16 / 9;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             border-radius: 15px;
             padding: 2rem;
-            text-align: center;
             margin-bottom: 2rem;
             transition: all 0.3s ease;
             cursor: pointer;
         }
 
         .upload-section:hover {
-            background: var(--upload-hover-bg);
-            border-color: var(--upload-hover-border);
+            transform: scale(1.01);
+            background: #111;
         }
 
         .upload-section.dragover {
-            background: #e8ecff;
-            border-color: var(--accent-hover);
+            background: #222;
             transform: scale(1.02);
         }
 
         .upload-icon {
             font-size: 4rem;
-            color: var(--accent-color);
+            color: white;
             margin-bottom: 1rem;
+        }
+
+        .upload-section h3 {
+            color: white;
+        }
+        
+        .upload-section p {
+            color: #ccc;
         }
 
         .file-input {
@@ -258,18 +271,34 @@
         }
 
         .platform-selection {
+            /* Override theme variables for this section to mimic dark mode */
+            --card-bg: #2c3e50;
+            --card-border: #405560;
+            --text-primary: #e0e0e0;
+            --accent-color: #00897b;
+
+            background: #2a3f34;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
             margin-bottom: 2rem;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
         .platform-selection h3 {
             color: var(--text-primary);
+            margin-top: 0;
             margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
         }
 
         .platform-grid {
             display: flex;
             gap: 0.75rem;
             justify-content: center;
+            flex-wrap: nowrap;
         }
 
         .platform-card {
@@ -283,6 +312,7 @@
             flex: 1;
             max-width: 120px;
             font-size: 0.8rem;
+            color: var(--text-primary); /* Use variable for text color */
         }
 
         .platform-card:hover {
@@ -772,6 +802,18 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.08);
         }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #resultsContainer {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -780,8 +822,8 @@
         <div class="left-panel">
             <div class="header">
                 <div class="title-box">
-                    <h1>🎬 숏츠 자동화</h1>
-                    <p>전문급 영상 처리 및 자동 편집 시스템</p>
+                    <h1>🎬 숏츠 자동화 프로그램</h1>
+                    
                 </div>
                 <button id="theme-toggle">🌙</button>
             </div>
@@ -895,38 +937,33 @@
                 </div>
             </div>
 
-            <!-- 플랫폼 선택 섹션 -->
             <div class="platform-selection">
-                <div class="title-box">
-                    <h3>🎯 타겟 플랫폼 선택</h3>
-                </div>
                 <div class="platform-grid">
                     <div class="platform-card" data-platform="youtube_shorts">
                         <div class="platform-icon">📺</div>
-                        <div>YouTube Shorts</div>
+                        YouTube Shorts
                     </div>
                     <div class="platform-card" data-platform="instagram_reels">
-                        <div class="platform-icon">📷</div>
-                        <div>Instagram Reels</div>
+                        <div class="platform-icon">📸</div>
+                        Instagram Reels
                     </div>
                     <div class="platform-card" data-platform="tiktok">
                         <div class="platform-icon">🎵</div>
-                        <div>TikTok</div>
+                        TikTok
                     </div>
                     <div class="platform-card" data-platform="naver">
-                        <div class="platform-icon">🇰🇷</div>
-                        <div>네이버</div>
+                        <div class="platform-icon">KR</div>
+                        네이버
                     </div>
                     <div class="platform-card" data-platform="facebook_reels">
                         <div class="platform-icon">👥</div>
-                        <div>Facebook Reels</div>
+                        Facebook Reels
                     </div>
                 </div>
             </div>
 
-            <!-- 처리 시작 버튼 -->
             <div class="process-section">
-                <button class="process-btn" id="processBtn" disabled>🚀&nbsp;영상 처리 시작</button>
+                <button id="processBtn" class="process-btn" disabled>🚀&nbsp;영상 처리 시작</button>
             </div>
 
             <!-- 진행률 표시 -->
@@ -940,13 +977,15 @@
 
         <!-- 오른쪽 패널: 영상 미리보기 및 결과 -->
         <div class="right-panel">
-            <div id="resultsContainer" style="display: block;">
-                 <div class="title-box">
+            <div id="resultsContainer">
+                <div class="title-box">
                     <h3>✅ 완성된 숏츠 영상</h3>
                 </div>
                 <div id="completedShortsGrid">
-                    <div class="short-item-placeholder">
-                        <p>영상을 처리하면<br>여기에 결과가 표시됩니다.</p>
+                    <div class="short-item">
+                        <div class="video-container">
+                            <!-- This is the black, rounded placeholder for the video -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1058,19 +1097,18 @@
             // --- Platform Selection ---
             platformCards.forEach(card => {
                 card.addEventListener('click', () => {
-                    platformCards.forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
+                    card.classList.toggle('selected');
                     updateProcessButtonState();
                 });
             });
 
-            function getSelectedPlatform() {
-                return document.querySelector('.platform-card.selected');
+            function getSelectedPlatforms() {
+                return document.querySelectorAll('.platform-card.selected');
             }
 
             // --- Process Button State ---
             function updateProcessButtonState() {
-                processBtn.disabled = !uploadedFile || !getSelectedPlatform();
+                processBtn.disabled = !uploadedFile || getSelectedPlatforms().length === 0;
             }
 
             // --- Main Processing Logic ---
@@ -1078,7 +1116,6 @@
                 if (processBtn.disabled) return;
                 
                 console.log('Processing started...');
-                resultsContainer.style.display = 'block';
                 completedShortsGrid.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">영상을 처리 중입니다...</p>';
 
                 setTimeout(() => {
