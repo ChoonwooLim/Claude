@@ -1947,10 +1947,7 @@
                             <input type="checkbox" id="addEffects" name="features" value="effects">
                             <label for="addEffects">영상효과 추가</label>
                         </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="faceAnalysis" name="features" value="face_analysis">
-                            <label for="faceAnalysis">🎭 배우 얼굴 분석 및 갤러리 생성</label>
-                        </div>
+
                     </div>
                 </div>
 
@@ -2072,7 +2069,7 @@
             </div>
 
             <!-- 배우 얼굴 갤러리 섹션 -->
-            <div class="face-gallery-container" id="faceGalleryContainer" style="display: none;">
+            <div class="face-gallery-container" id="faceGalleryContainer" style="display: block;">
                 <h3>🎭 배우 얼굴 갤러리</h3>
                 <div class="face-gallery-controls">
                     <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
@@ -2237,7 +2234,7 @@
 
             // Face Gallery elements
             const faceGalleryContainer = document.getElementById('faceGalleryContainer');
-            const faceAnalysisCheckbox = document.getElementById('faceAnalysis');
+            const faceAnalysisCheckbox = document.getElementById('autoFaceAnalysis');
             const analyzeFacesBtn = document.getElementById('analyzeFacesBtn');
             const autoFaceAnalysis = document.getElementById('autoFaceAnalysis');
             const generateFaceImagesBtn = document.getElementById('generateFaceImagesBtn');
@@ -3966,6 +3963,10 @@ ${optionsText}
             });
 
             analyzeFacesBtn.addEventListener('click', async () => {
+                console.log('🔍 얼굴 분석 버튼 클릭됨!');
+                console.log('uploadedFile:', uploadedFile);
+                console.log('faceAnalysisInProgress:', faceAnalysisInProgress);
+                
                 if (!uploadedFile) {
                     alert('먼저 영상을 업로드해주세요.');
                     return;
@@ -3976,7 +3977,7 @@ ${optionsText}
                     return;
                 }
 
-                console.log('얼굴 분석 시작...');
+                console.log('✅ 얼굴 분석 시작...');
                 await startFaceAnalysis();
             });
 
