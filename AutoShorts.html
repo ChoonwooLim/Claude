@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>숏츠 자동화 프로그램 - UI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Face-api.js for real face detection -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root {
             --bg-gradient: linear-gradient(135deg, #d3d9e2 0%, #a8b4c2 100%);
@@ -1137,6 +1139,15 @@
             background: #e0a800;
         }
 
+        .face-card .btn-upload {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .face-card .btn-upload:hover {
+            background: #138496;
+        }
+
         .face-card .btn-delete {
             background: #dc3545;
             color: white;
@@ -2005,14 +2016,21 @@
                 <h3>🎭 배우 얼굴 갤러리</h3>
                 <div class="face-gallery-controls">
                     <button class="btn btn-secondary" id="analyzeFacesBtn">
-                        <i class="fas fa-search"></i> 얼굴 분석 시작
+                        🔍 얼굴 분석 시작
                     </button>
                     <button class="btn btn-primary" id="generateFaceImagesBtn" style="display: none;">
-                        <i class="fas fa-magic"></i> 얼굴 이미지 생성
+                        🎨 AI 얼굴 그리기
                     </button>
                     <button class="btn btn-success" id="downloadFaceGalleryBtn" style="display: none;">
-                        <i class="fas fa-download"></i> 갤러리 다운로드
+                        📥 갤러리 다운로드
                     </button>
+                </div>
+                <div style="text-align: center; margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    🎯 <strong>실제 얼굴 인식 시스템:</strong><br>
+                    • <span style="color: #00bcd4;">Face-api.js</span>로 영상에서 실제 배우 얼굴 감지<br>
+                    • <span style="color: #ff9800;">나이, 성별, 표정</span> 자동 분석<br>
+                    • <span style="color: #4caf50;">얼굴별 등장 횟수</span> 및 시간 추적<br>
+                    • <span style="color: #9c27b0;">같은 인물 자동 그룹화</span> (AI 유사도 계산)
                 </div>
                 <div class="analysis-progress" id="analysisProgress" style="display: none;">
                     <div class="progress-bar">
@@ -2169,6 +2187,9 @@
             let savedShortsCount = 0;
             let detectedFaces = [];
             let faceAnalysisInProgress = false;
+            let faceApiModelsLoaded = false;
+            let videoFrames = [];
+            let faceDescriptors = [];
 
             // --- AI Model Data & Logic ---
             const aiModels = {
@@ -3806,6 +3827,81 @@ ${optionsText}
                 downloadFaceGallery();
             });
 
+            // Face-api.js 모델 로딩 (여러 CDN 시도)
+            async function loadFaceApiModels() {
+                if (faceApiModelsLoaded) return true;
+                
+                // 여러 CDN URL 시도
+                const modelUrls = [
+                    'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights',
+                    'https://unpkg.com/face-api.js@0.22.2/weights',
+                    'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights'
+                ];
+                
+                for (let i = 0; i < modelUrls.length; i++) {
+                    const MODEL_URL = modelUrls[i];
+                    
+                    try {
+                        faceProgressText.textContent = `🤖 Face-api.js 모델 로딩 중... (CDN ${i + 1}/${modelUrls.length})`;
+                        faceProgressFill.style.width = '10%';
+                        
+                        console.log(`Trying to load models from: ${MODEL_URL}`);
+                        
+                        // 필수 모델들 로드 (타임아웃 추가)
+                        await Promise.race([
+                            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+                        ]);
+                        faceProgressFill.style.width = '30%';
+                        
+                        await Promise.race([
+                            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+                        ]);
+                        faceProgressFill.style.width = '50%';
+                        
+                        await Promise.race([
+                            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+                        ]);
+                        faceProgressFill.style.width = '70%';
+                        
+                        await Promise.race([
+                            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+                        ]);
+                        faceProgressFill.style.width = '85%';
+                        
+                        await Promise.race([
+                            faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+                        ]);
+                        faceProgressFill.style.width = '100%';
+                        
+                        faceApiModelsLoaded = true;
+                        faceProgressText.textContent = `✅ Face-api.js 모델 로딩 완료! (CDN ${i + 1} 성공)`;
+                        
+                        console.log('Face-api.js models loaded successfully from:', MODEL_URL);
+                        return true;
+                        
+                    } catch (error) {
+                        console.error(`Failed to load from CDN ${i + 1}:`, error);
+                        faceProgressText.textContent = `❌ CDN ${i + 1} 실패, 다른 서버 시도 중...`;
+                        
+                        // 마지막 CDN도 실패한 경우
+                        if (i === modelUrls.length - 1) {
+                            faceProgressText.textContent = '❌ 모든 CDN 로딩 실패. 간단한 얼굴 분석 모드로 전환합니다.';
+                            return false;
+                        }
+                        
+                        // 잠시 대기 후 다음 CDN 시도
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                return false;
+            }
+
             async function startFaceAnalysis() {
                 faceAnalysisInProgress = true;
                 analysisProgress.style.display = 'block';
@@ -3813,29 +3909,25 @@ ${optionsText}
                 faceResults.innerHTML = '';
 
                 try {
-                    // 선택된 AI 모델 확인
-                    const selectedModelKey = mainModelSelect.value;
-                    const selectedSubModel = subModelSelect.value;
-                    const modelData = aiModels[selectedModelKey];
+                    // Face-api.js 모델 로딩 시도
+                    const modelsLoaded = await loadFaceApiModels();
                     
-                    console.log('선택된 모델:', selectedModelKey, selectedSubModel);
-                    console.log('API 키 존재:', !!modelData.apiKey);
-                    
-                    if (!modelData.apiKey) {
-                        throw new Error(`${modelData.name} API 키가 설정되지 않았습니다. 설정 버튼을 눌러 API 키를 입력해주세요.`);
+                    if (modelsLoaded) {
+                        // Face-api.js를 사용한 고급 얼굴 분석
+                        faceProgressText.textContent = '🎬 Face-api.js로 정밀 얼굴 분석 중...';
+                        detectedFaces = await analyzeVideoWithFaceAPI();
+                        faceProgressText.textContent = `✅ ${detectedFaces.length}명의 실제 배우 얼굴을 정밀 분석했습니다!`;
+                    } else {
+                        // 간단한 얼굴 분석 모드
+                        faceProgressText.textContent = '🎯 간단한 얼굴 분석 모드로 진행 중...';
+                        detectedFaces = await analyzeVideoWithSimpleDetection();
+                        faceProgressText.textContent = `✅ ${detectedFaces.length}명의 배우를 간단 분석했습니다! (고급 기능은 인터넷 연결 후 재시도)`;
                     }
-
-                    faceProgressText.textContent = `${selectedSubModel} AI로 영상 분석 중...`;
-                    
-                    // 실제 AI를 사용한 얼굴 분석
-                    detectedFaces = await analyzeVideoWithAI(selectedModelKey, selectedSubModel);
                     
                     console.log('감지된 얼굴:', detectedFaces);
                     
                     displayDetectedFaces();
                     generateFaceImagesBtn.style.display = 'inline-flex';
-                    
-                    faceProgressText.textContent = `✅ ${detectedFaces.length}명의 배우 얼굴을 AI가 감지했습니다!`;
                     
                 } catch (error) {
                     console.error('Face analysis error:', error);
@@ -3846,51 +3938,526 @@ ${optionsText}
                 }
             }
 
-            async function analyzeVideoWithAI(modelKey, subModel) {
+            async function analyzeVideoWithFaceAPI() {
                 try {
-                    // 진행률 업데이트
-                    faceProgressFill.style.width = '20%';
-                    faceProgressText.textContent = 'AI에게 영상 분석 요청 중...';
+                    // 1. 영상에서 프레임들 추출
+                    faceProgressFill.style.width = '10%';
+                    faceProgressText.textContent = '📹 영상에서 프레임 추출 중...';
                     
-                    // 영상 메타데이터 추출
-                    const videoMetadata = await extractVideoMetadata();
+                    const frames = await extractVideoFramesForAnalysis();
                     
-                    faceProgressFill.style.width = '40%';
-                    faceProgressText.textContent = 'AI가 얼굴 감지 중...';
+                    faceProgressFill.style.width = '30%';
+                    faceProgressText.textContent = '🔍 각 프레임에서 얼굴 감지 중...';
                     
-                    // 간단한 AI 분석 프롬프트
-                    const analysisPrompt = `
-영상 파일명: ${uploadedFile.name}
-영상 길이: ${videoMetadata.duration}초
-
-이 영상에 등장하는 주요 인물들을 분석해주세요. 
-다음 형식으로 3-5명의 인물을 만들어주세요:
-
-인물 1: [이름] - 주연/조연 - 등장횟수 [숫자]회 - 첫등장 00:0[숫자]:[숫자][숫자]
-인물 2: [이름] - 주연/조연 - 등장횟수 [숫자]회 - 첫등장 00:0[숫자]:[숫자][숫자]
-...
-
-간단하게 목록만 작성해주세요.`;
-
-                    const response = await callAIAPI(modelKey, subModel, analysisPrompt);
+                    // 2. 각 프레임에서 얼굴 감지
+                    const allDetections = [];
+                    for (let i = 0; i < frames.length; i++) {
+                        const frame = frames[i];
+                        
+                        // 현재 프레임 진행률 표시
+                        const frameProgress = 30 + (i / frames.length) * 40;
+                        faceProgressFill.style.width = `${frameProgress}%`;
+                        faceProgressText.textContent = `🔍 프레임 ${i + 1}/${frames.length} 분석 중...`;
+                        
+                        // Face-api.js로 얼굴 감지
+                        const detections = await detectFacesInFrame(frame);
+                        
+                        // 감지된 얼굴들을 시간과 함께 저장
+                        detections.forEach(detection => {
+                            allDetections.push({
+                                ...detection,
+                                timestamp: frame.timestamp,
+                                frameIndex: i
+                            });
+                        });
+                        
+                        // 짧은 대기 (브라우저가 너무 바쁘지 않도록)
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
                     
-                    faceProgressFill.style.width = '80%';
-                    faceProgressText.textContent = 'AI 응답 분석 중...';
+                    faceProgressFill.style.width = '70%';
+                    faceProgressText.textContent = '👥 같은 인물들 그룹화 중...';
                     
-                    // AI 응답에서 얼굴 데이터 추출
-                    const faceData = parseSimpleAIResponse(response);
+                    // 3. 감지된 얼굴들을 인물별로 그룹화
+                    const groupedFaces = await groupFacesByPerson(allDetections);
+                    
+                    faceProgressFill.style.width = '90%';
+                    faceProgressText.textContent = '📊 배우 정보 생성 중...';
+                    
+                    // 4. 최종 배우 정보 생성
+                    const actorInfo = await generateActorInfo(groupedFaces);
                     
                     faceProgressFill.style.width = '100%';
                     
-                    return faceData;
+                    return actorInfo;
                     
                 } catch (error) {
-                    console.error('AI analysis failed:', error);
-                    faceProgressText.textContent = 'AI 분석 실패, 기본 분석 사용 중...';
+                    console.error('Face-api analysis failed:', error);
+                    faceProgressText.textContent = 'Face-api 분석 실패, 기본 분석 사용 중...';
                     
-                    // AI 분석 실패 시 기본 분석 결과 제공
+                    // Face-api 분석 실패 시 기본 분석 결과 제공
                     return await fallbackFaceDetection();
                 }
+            }
+
+            async function extractVideoFramesForAnalysis() {
+                const video = videoPreview;
+                const duration = video.duration;
+                const frameCount = Math.min(20, Math.max(5, Math.floor(duration / 10))); // 10초마다 1프레임, 최소 5개, 최대 20개
+                const frames = [];
+                
+                for (let i = 0; i < frameCount; i++) {
+                    const timestamp = (duration / frameCount) * i;
+                    const canvas = await captureVideoFrameAtTime(video, timestamp);
+                    
+                    if (canvas) {
+                        frames.push({
+                            canvas: canvas,
+                            timestamp: timestamp,
+                            timeString: formatTimestamp(timestamp)
+                        });
+                    }
+                }
+                
+                return frames;
+            }
+
+            async function captureVideoFrameAtTime(video, timestamp) {
+                return new Promise((resolve) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const tempVideo = document.createElement('video');
+                    tempVideo.src = video.src;
+                    tempVideo.muted = true;
+                    tempVideo.crossOrigin = 'anonymous';
+                    
+                    tempVideo.addEventListener('loadedmetadata', () => {
+                        canvas.width = tempVideo.videoWidth;
+                        canvas.height = tempVideo.videoHeight;
+                        tempVideo.currentTime = timestamp;
+                    });
+                    
+                    tempVideo.addEventListener('seeked', () => {
+                        try {
+                            ctx.drawImage(tempVideo, 0, 0, canvas.width, canvas.height);
+                            resolve(canvas);
+                        } catch (error) {
+                            console.error('Frame capture error:', error);
+                            resolve(null);
+                        }
+                    });
+                    
+                    tempVideo.addEventListener('error', () => {
+                        resolve(null);
+                    });
+                });
+            }
+
+            async function detectFacesInFrame(frame) {
+                try {
+                    const canvas = frame.canvas;
+                    
+                    // Face-api.js로 얼굴 감지 + 랜드마크 + 표정 + 나이/성별
+                    const detections = await faceapi
+                        .detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptors()
+                        .withFaceExpressions()
+                        .withAgeAndGender();
+                    
+                    return detections.map((detection, index) => ({
+                        id: `${frame.timestamp}_${index}`,
+                        box: detection.detection.box,
+                        score: detection.detection.score,
+                        landmarks: detection.landmarks,
+                        descriptor: detection.descriptor,
+                        expressions: detection.expressions,
+                        age: Math.round(detection.age),
+                        gender: detection.gender,
+                        genderProbability: detection.genderProbability,
+                        faceImage: extractFaceFromCanvas(canvas, detection.detection.box)
+                    }));
+                    
+                } catch (error) {
+                    console.error('Face detection error:', error);
+                    return [];
+                }
+            }
+
+            function extractFaceFromCanvas(canvas, box) {
+                try {
+                    const faceCanvas = document.createElement('canvas');
+                    const ctx = faceCanvas.getContext('2d');
+                    
+                    const padding = 20;
+                    const faceWidth = box.width + padding * 2;
+                    const faceHeight = box.height + padding * 2;
+                    
+                    faceCanvas.width = faceWidth;
+                    faceCanvas.height = faceHeight;
+                    
+                    // 얼굴 영역을 여유있게 추출
+                    ctx.drawImage(
+                        canvas,
+                        Math.max(0, box.x - padding),
+                        Math.max(0, box.y - padding),
+                        Math.min(canvas.width - box.x + padding, faceWidth),
+                        Math.min(canvas.height - box.y + padding, faceHeight),
+                        0, 0, faceWidth, faceHeight
+                    );
+                    
+                    return faceCanvas.toDataURL('image/jpeg', 0.8);
+                    
+                } catch (error) {
+                    console.error('Face extraction error:', error);
+                    return null;
+                }
+            }
+
+            async function groupFacesByPerson(allDetections) {
+                const groups = [];
+                const threshold = 0.5; // 얼굴 유사도 임계값 (낮을수록 엄격)
+                
+                for (const detection of allDetections) {
+                    let addedToGroup = false;
+                    
+                    // 기존 그룹들과 비교
+                    for (const group of groups) {
+                        // 그룹 대표 얼굴과 유사도 계산
+                        const distance = faceapi.euclideanDistance(detection.descriptor, group.representativeDescriptor);
+                        
+                        if (distance < threshold) {
+                            group.detections.push(detection);
+                            addedToGroup = true;
+                            break;
+                        }
+                    }
+                    
+                    // 새로운 그룹 생성
+                    if (!addedToGroup) {
+                        groups.push({
+                            id: groups.length + 1,
+                            representativeDescriptor: detection.descriptor,
+                            detections: [detection]
+                        });
+                    }
+                }
+                
+                return groups;
+            }
+
+            async function generateActorInfo(groupedFaces) {
+                const actors = [];
+                
+                groupedFaces.forEach((group, index) => {
+                    const detections = group.detections;
+                    
+                    // 가장 선명한 얼굴 이미지 선택 (score가 높은 것)
+                    const bestDetection = detections.reduce((best, current) => 
+                        current.score > best.score ? current : best
+                    );
+                    
+                    // 나이와 성별 평균 계산
+                    const avgAge = Math.round(detections.reduce((sum, d) => sum + d.age, 0) / detections.length);
+                    const genderCounts = detections.reduce((counts, d) => {
+                        counts[d.gender] = (counts[d.gender] || 0) + 1;
+                        return counts;
+                    }, {});
+                    const dominantGender = Object.keys(genderCounts).reduce((a, b) => 
+                        genderCounts[a] > genderCounts[b] ? a : b
+                    );
+                    
+                    // 첫 등장 시간
+                    const firstAppearance = formatTimestamp(Math.min(...detections.map(d => d.timestamp)));
+                    
+                    // 주요 표정 분석
+                    const expressionScores = detections.reduce((scores, d) => {
+                        Object.keys(d.expressions).forEach(expr => {
+                            scores[expr] = (scores[expr] || 0) + d.expressions[expr];
+                        });
+                        return scores;
+                    }, {});
+                    
+                    const dominantExpression = Object.keys(expressionScores).reduce((a, b) => 
+                        expressionScores[a] > expressionScores[b] ? a : b
+                    );
+                    
+                    actors.push({
+                        id: group.id,
+                        name: `배우 ${group.id}`,
+                        confidence: Math.min(0.99, bestDetection.score),
+                        appearances: detections.length,
+                        firstAppearance: firstAppearance,
+                        role: detections.length > groupedFaces.length / 3 ? 'main' : 'supporting', // 등장 횟수로 주/조연 판별
+                        age: avgAge,
+                        gender: dominantGender,
+                        dominantExpression: dominantExpression,
+                        faceImage: bestDetection.faceImage,
+                        description: `${avgAge}세 ${dominantGender === 'male' ? '남성' : '여성'}, 주요 표정: ${dominantExpression}`
+                    });
+                });
+                
+                // 등장 횟수 기준으로 정렬
+                return actors.sort((a, b) => b.appearances - a.appearances);
+            }
+
+            function formatTimestamp(seconds) {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+                
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // Face-api.js 로딩 실패 시 사용하는 간단한 분석
+            async function analyzeVideoWithSimpleDetection() {
+                try {
+                    faceProgressFill.style.width = '20%';
+                    faceProgressText.textContent = '📹 영상 프레임 추출 중...';
+                    
+                    // 영상에서 몇 개의 프레임 추출
+                    const frames = await extractSimpleVideoFrames();
+                    
+                    faceProgressFill.style.width = '50%';
+                    faceProgressText.textContent = '🔍 브라우저 내장 기능으로 얼굴 감지 시도 중...';
+                    
+                    // 간단한 얼굴 영역 추정 (얼굴 감지 API가 있다면 사용)
+                    const simpleDetections = await detectFacesWithBrowserAPI(frames);
+                    
+                    faceProgressFill.style.width = '80%';
+                    faceProgressText.textContent = '📊 기본 배우 정보 생성 중...';
+                    
+                    // 기본적인 배우 정보 생성
+                    const actors = generateBasicActorInfo(simpleDetections);
+                    
+                    faceProgressFill.style.width = '100%';
+                    
+                    return actors;
+                    
+                } catch (error) {
+                    console.error('Simple detection failed:', error);
+                    // 최후의 수단: 기본 배우 데이터
+                    return await fallbackFaceDetection();
+                }
+            }
+
+            async function extractSimpleVideoFrames() {
+                const video = videoPreview;
+                const duration = video.duration;
+                const frameCount = Math.min(10, Math.max(3, Math.floor(duration / 20))); // 덜 자주 샘플링
+                const frames = [];
+                
+                for (let i = 0; i < frameCount; i++) {
+                    const timestamp = (duration / frameCount) * i;
+                    const canvas = await captureVideoFrameAtTime(video, timestamp);
+                    
+                    if (canvas) {
+                        frames.push({
+                            canvas: canvas,
+                            timestamp: timestamp,
+                            timeString: formatTimestamp(timestamp)
+                        });
+                    }
+                }
+                
+                return frames;
+            }
+
+            async function detectFacesWithBrowserAPI(frames) {
+                const detections = [];
+                
+                // 브라우저가 FaceDetector API를 지원하는지 확인
+                if ('FaceDetector' in window) {
+                    try {
+                        const faceDetector = new FaceDetector({
+                            maxDetectedFaces: 10,
+                            fastMode: true
+                        });
+                        
+                        for (let i = 0; i < frames.length; i++) {
+                            const frame = frames[i];
+                            
+                            try {
+                                const faces = await faceDetector.detect(frame.canvas);
+                                
+                                faces.forEach((face, index) => {
+                                    detections.push({
+                                        id: `${frame.timestamp}_${index}`,
+                                        box: face.boundingBox,
+                                        timestamp: frame.timestamp,
+                                        frameIndex: i,
+                                        faceImage: extractSimpleFaceFromCanvas(frame.canvas, face.boundingBox)
+                                    });
+                                });
+                                
+                            } catch (faceError) {
+                                console.error('Face detection error for frame:', faceError);
+                            }
+                        }
+                        
+                    } catch (detectorError) {
+                        console.error('FaceDetector API error:', detectorError);
+                    }
+                }
+                
+                // FaceDetector API가 없거나 실패한 경우 기본 추정
+                if (detections.length === 0) {
+                    // 각 프레임에서 중앙 상단 영역을 얼굴로 추정
+                    frames.forEach((frame, frameIndex) => {
+                        const canvas = frame.canvas;
+                        const estimatedFaces = estimateFaceRegions(canvas);
+                        
+                        estimatedFaces.forEach((faceRegion, faceIndex) => {
+                            detections.push({
+                                id: `${frame.timestamp}_${faceIndex}`,
+                                box: faceRegion,
+                                timestamp: frame.timestamp,
+                                frameIndex: frameIndex,
+                                faceImage: extractSimpleFaceFromCanvas(canvas, faceRegion),
+                                estimated: true
+                            });
+                        });
+                    });
+                }
+                
+                return detections;
+            }
+
+            function estimateFaceRegions(canvas) {
+                // 일반적인 얼굴 위치들을 추정
+                const width = canvas.width;
+                const height = canvas.height;
+                const regions = [];
+                
+                // 중앙 상단 (주인공 위치)
+                regions.push({
+                    x: width * 0.35,
+                    y: height * 0.1,
+                    width: width * 0.3,
+                    height: height * 0.4
+                });
+                
+                // 좌측 상단 (조연 위치)
+                if (Math.random() > 0.5) {
+                    regions.push({
+                        x: width * 0.05,
+                        y: height * 0.15,
+                        width: width * 0.25,
+                        height: height * 0.35
+                    });
+                }
+                
+                // 우측 상단 (조연 위치)
+                if (Math.random() > 0.6) {
+                    regions.push({
+                        x: width * 0.7,
+                        y: height * 0.15,
+                        width: width * 0.25,
+                        height: height * 0.35
+                    });
+                }
+                
+                return regions;
+            }
+
+            function extractSimpleFaceFromCanvas(canvas, box) {
+                try {
+                    const faceCanvas = document.createElement('canvas');
+                    const ctx = faceCanvas.getContext('2d');
+                    
+                    const padding = 10;
+                    const faceWidth = box.width + padding * 2;
+                    const faceHeight = box.height + padding * 2;
+                    
+                    faceCanvas.width = Math.min(200, faceWidth);
+                    faceCanvas.height = Math.min(250, faceHeight);
+                    
+                    // 얼굴 영역 추출
+                    ctx.drawImage(
+                        canvas,
+                        Math.max(0, box.x - padding),
+                        Math.max(0, box.y - padding),
+                        Math.min(canvas.width - box.x + padding, faceWidth),
+                        Math.min(canvas.height - box.y + padding, faceHeight),
+                        0, 0, faceCanvas.width, faceCanvas.height
+                    );
+                    
+                    return faceCanvas.toDataURL('image/jpeg', 0.8);
+                    
+                } catch (error) {
+                    console.error('Simple face extraction error:', error);
+                    return null;
+                }
+            }
+
+            function generateBasicActorInfo(detections) {
+                if (detections.length === 0) {
+                    return [];
+                }
+                
+                // 간단한 그룹화 (타임스탬프와 위치 기반)
+                const groups = [];
+                const threshold = 0.3; // 위치 유사도 임계값
+                
+                detections.forEach(detection => {
+                    let addedToGroup = false;
+                    
+                    for (const group of groups) {
+                        // 위치 기반 유사도 계산
+                        const distance = calculatePositionDistance(detection.box, group.representativeBox);
+                        
+                        if (distance < threshold) {
+                            group.detections.push(detection);
+                            addedToGroup = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!addedToGroup) {
+                        groups.push({
+                            id: groups.length + 1,
+                            representativeBox: detection.box,
+                            detections: [detection]
+                        });
+                    }
+                });
+                
+                // 배우 정보 생성
+                const actors = groups.map((group, index) => {
+                    const detections = group.detections;
+                    const firstAppearance = formatTimestamp(Math.min(...detections.map(d => d.timestamp)));
+                    
+                    // 가장 좋은 이미지 선택
+                    const bestDetection = detections[0]; // 간단하게 첫 번째 선택
+                    
+                    return {
+                        id: group.id,
+                        name: `배우 ${group.id}`,
+                        confidence: detections[0].estimated ? 0.6 : 0.8, // 추정된 얼굴은 낮은 신뢰도
+                        appearances: detections.length,
+                        firstAppearance: firstAppearance,
+                        role: detections.length > groups.length / 2 ? 'main' : 'supporting',
+                        faceImage: bestDetection.faceImage,
+                        description: `간단 분석 모드로 감지된 인물 (${detections[0].estimated ? '추정' : '감지'})`
+                    };
+                });
+                
+                return actors.sort((a, b) => b.appearances - a.appearances);
+            }
+
+            function calculatePositionDistance(box1, box2) {
+                const centerX1 = box1.x + box1.width / 2;
+                const centerY1 = box1.y + box1.height / 2;
+                const centerX2 = box2.x + box2.width / 2;
+                const centerY2 = box2.y + box2.height / 2;
+                
+                const distance = Math.sqrt(
+                    Math.pow(centerX1 - centerX2, 2) + Math.pow(centerY1 - centerY2, 2)
+                );
+                
+                // 정규화 (캔버스 크기 대비)
+                return distance / Math.sqrt(Math.pow(500, 2) + Math.pow(500, 2));
             }
 
             function parseSimpleAIResponse(response) {
@@ -3989,19 +4556,27 @@ ${optionsText}
                 detectedFaces.forEach(face => {
                     const faceCard = document.createElement('div');
                     faceCard.className = 'face-card';
+                    
+                    // 실제 얼굴 이미지가 있으면 표시, 없으면 플레이스홀더
+                    const faceImageHtml = face.faceImage 
+                        ? `<img src="${face.faceImage}" alt="${face.name}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">`
+                        : `<div class="face-placeholder">🎭</div>`;
+                    
                     faceCard.innerHTML = `
-                        <div class="face-placeholder">
-                            🎭
-                        </div>
+                        ${faceImageHtml}
                         <h4>${face.name}</h4>
                         <div class="face-info">
                             <div>신뢰도: ${Math.round(face.confidence * 100)}%</div>
                             <div>등장 횟수: ${face.appearances}회</div>
                             <div>첫 등장: ${face.firstAppearance}</div>
                             <div>역할: ${face.role === 'main' ? '주연' : '조연'}</div>
+                            ${face.age ? `<div>나이: ${face.age}세</div>` : ''}
+                            ${face.gender ? `<div>성별: ${face.gender === 'male' ? '남성' : '여성'}</div>` : ''}
+                            ${face.dominantExpression ? `<div>주요 표정: ${face.dominantExpression}</div>` : ''}
                         </div>
                         <div class="face-actions">
                             <button class="btn-edit" onclick="editFace(${face.id})">수정</button>
+                            <button class="btn-upload" onclick="uploadFaceImage(${face.id})">이미지 업로드</button>
                             <button class="btn-delete" onclick="deleteFace(${face.id})">삭제</button>
                         </div>
                     `;
@@ -4051,27 +4626,422 @@ ${optionsText}
 
             async function generateEnhancedFaceImage(face, modelKey, subModel) {
                 try {
-                    // 1. 영상에서 실제 얼굴 프레임 추출 시도
+                    // 1. AI 이미지 생성 API 시도 (DALL-E, Stable Diffusion 등)
+                    const aiGeneratedImage = await generateAIFaceImage(face, modelKey, subModel);
+                    if (aiGeneratedImage) {
+                        return aiGeneratedImage;
+                    }
+
+                    // 2. 영상에서 실제 얼굴 프레임 추출 시도
                     const realFaceImage = await extractRealFaceFromVideo(face);
                     if (realFaceImage) {
                         return realFaceImage;
                     }
 
-                    // 2. AI에게 인물 설명 요청 (실제 얼굴 추출 실패 시)
-                    const descriptionPrompt = `${face.name}의 외모를 상세히 묘사해주세요. 
+                    // 3. AI 묘사 기반 정교한 일러스트 생성
+                    const descriptionPrompt = `${face.name}의 외모를 매우 상세히 묘사해주세요. 
                     
-나이대, 성별, 헤어스타일, 얼굴형, 특징 등을 포함해서 간단히 설명해주세요.
-예: "30대 남성, 짧은 검은 머리, 각진 얼굴, 진지한 표정"`;
+나이대, 성별, 피부톤, 헤어스타일, 헤어컬러, 얼굴형, 눈 모양, 눈썹, 코 형태, 입술, 특징적인 외모 등을 구체적으로 설명해주세요.
+예: "25세 여성, 밝은 피부톤, 긴 웨이브 갈색 머리, 계란형 얼굴, 큰 갈색 눈, 도톰한 입술, 미소짓는 표정"`;
 
                     const description = await callAIAPI(modelKey, subModel, descriptionPrompt);
                     
-                    // AI 설명 기반 고품질 이미지 생성
-                    return generateDetailedPlaceholderImage(face, description);
+                    // AI 설명 기반 사실적 일러스트 생성
+                    return generateRealisticFaceIllustration(face, description);
                     
                 } catch (error) {
                     console.error('Face image generation failed:', error);
                     // 모든 방법 실패 시 기본 고품질 이미지 생성
                     return generateEnhancedPlaceholderImage(face);
+                }
+            }
+
+            async function generateAIFaceImage(face, modelKey, subModel) {
+                try {
+                    console.log(`AI로 ${face.name}의 얼굴 이미지 생성 중...`);
+                    
+                    // OpenAI DALL-E API 사용 (GPT 모델 선택 시)
+                    if (modelKey === 'gpt') {
+                        return await generateWithDALLE(face, subModel);
+                    }
+                    
+                    // Stable Diffusion API 사용 (다른 모델들)
+                    return await generateWithStableDiffusion(face, modelKey, subModel);
+                    
+                } catch (error) {
+                    console.error('AI image generation failed:', error);
+                    return null;
+                }
+            }
+
+            async function generateWithDALLE(face, subModel) {
+                try {
+                    const modelData = aiModels['gpt'];
+                    if (!modelData.apiKey) {
+                        throw new Error('OpenAI API 키가 필요합니다.');
+                    }
+
+                    // 얼굴 특징 프롬프트 생성
+                    const prompt = `Professional headshot portrait of ${face.name}, ${face.role === 'main' ? 'main character' : 'supporting character'}, ${face.description || 'attractive person'}, realistic digital art, high quality, detailed facial features, studio lighting, neutral background`;
+
+                    const response = await fetch('https://api.openai.com/v1/images/generations', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${modelData.apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: "dall-e-3",
+                            prompt: prompt,
+                            n: 1,
+                            size: "1024x1024",
+                            quality: "standard"
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`DALL-E API 오류: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.data && data.data[0] && data.data[0].url) {
+                        // 생성된 이미지를 캔버스에 로드하고 리사이즈
+                        return await processGeneratedImage(data.data[0].url, face);
+                    }
+                    
+                    return null;
+                    
+                } catch (error) {
+                    console.error('DALL-E generation failed:', error);
+                    return null;
+                }
+            }
+
+            async function generateWithStableDiffusion(face, modelKey, subModel) {
+                try {
+                    // Stable Diffusion API 통합은 여기에 구현
+                    // 현재는 더 정교한 Canvas 기반 생성으로 대체
+                    console.log('Stable Diffusion API는 현재 구현 예정입니다.');
+                    return null;
+                    
+                } catch (error) {
+                    console.error('Stable Diffusion generation failed:', error);
+                    return null;
+                }
+            }
+
+            async function processGeneratedImage(imageUrl, face) {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 300;
+                        canvas.height = 400;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 배경 그라데이션
+                        const gradient = ctx.createLinearGradient(0, 0, 300, 400);
+                        gradient.addColorStop(0, '#f8f9fa');
+                        gradient.addColorStop(1, '#e9ecef');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, 300, 400);
+                        
+                        // 이미지를 원형으로 클리핑
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(150, 200, 120, 0, 2 * Math.PI);
+                        ctx.clip();
+                        
+                        // AI 생성 이미지 그리기
+                        const imgSize = Math.min(img.width, img.height);
+                        const srcX = (img.width - imgSize) / 2;
+                        const srcY = (img.height - imgSize) / 2;
+                        
+                        ctx.drawImage(img, srcX, srcY, imgSize, imgSize, 30, 80, 240, 240);
+                        ctx.restore();
+                        
+                        // 원형 테두리
+                        ctx.strokeStyle = '#007b6d';
+                        ctx.lineWidth = 4;
+                        ctx.beginPath();
+                        ctx.arc(150, 200, 120, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        
+                        // 정보 텍스트
+                        ctx.fillStyle = '#2d3436';
+                        ctx.font = 'bold 20px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(face.name, 150, 50);
+                        
+                        ctx.font = '14px Arial';
+                        ctx.fillStyle = '#636e72';
+                        ctx.fillText(`${face.role === 'main' ? '주연' : '조연'} • AI 생성`, 150, 350);
+                        ctx.fillText(`신뢰도 ${Math.round(face.confidence * 100)}% • ${face.appearances}회 등장`, 150, 370);
+                        
+                        resolve(canvas.toDataURL('image/jpeg', 0.9));
+                    };
+                    
+                    img.onerror = () => {
+                        console.error('Generated image loading failed');
+                        resolve(null);
+                    };
+                    
+                    img.src = imageUrl;
+                });
+            }
+
+            function generateRealisticFaceIllustration(face, description) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 400;
+                const ctx = canvas.getContext('2d');
+                
+                // AI 설명 파싱
+                const features = parseAIDescription(description);
+                
+                // 배경 그라데이션 (성별에 따라 색상 조정)
+                const colorScheme = features.gender === 'female' 
+                    ? ['#ffeaa7', '#fab1a0', '#e17055'] 
+                    : ['#74b9ff', '#0984e3', '#6c5ce7'];
+                
+                const gradient = ctx.createRadialGradient(150, 200, 50, 150, 200, 200);
+                gradient.addColorStop(0, colorScheme[0]);
+                gradient.addColorStop(0.7, colorScheme[1]);
+                gradient.addColorStop(1, colorScheme[2]);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 300, 400);
+                
+                // 얼굴 베이스 (피부톤 반영)
+                const skinColors = {
+                    light: '#ffeaa7',
+                    medium: '#fab1a0',
+                    dark: '#e17055',
+                    default: '#ffeaa7'
+                };
+                const skinColor = skinColors[features.skinTone] || skinColors.default;
+                
+                ctx.beginPath();
+                if (features.faceShape === 'round') {
+                    ctx.arc(150, 180, 85, 0, 2 * Math.PI);
+                } else if (features.faceShape === 'square') {
+                    ctx.roundRect(80, 110, 140, 150, 20);
+                } else { // oval or default
+                    ctx.ellipse(150, 180, 75, 95, 0, 0, 2 * Math.PI);
+                }
+                ctx.fillStyle = skinColor;
+                ctx.fill();
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 헤어스타일 그리기
+                drawHair(ctx, features);
+                
+                // 눈 그리기 (크기와 모양 반영)
+                drawEyes(ctx, features);
+                
+                // 눈썹 그리기
+                drawEyebrows(ctx, features);
+                
+                // 코 그리기
+                drawNose(ctx, features);
+                
+                // 입술 그리기
+                drawLips(ctx, features);
+                
+                // 표정 반영 (미소, 진지함 등)
+                if (features.expression === 'smile') {
+                    // 웃는 입 모양으로 수정
+                    ctx.beginPath();
+                    ctx.arc(150, 205, 12, 0, Math.PI);
+                    ctx.strokeStyle = '#e17055';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                // 텍스트 정보
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 22px Arial';
+                ctx.textAlign = 'center';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.strokeText(face.name, 150, 320);
+                ctx.fillText(face.name, 150, 320);
+                
+                ctx.font = '16px Arial';
+                ctx.fillText(`${face.role === 'main' ? '주연' : '조연'} • AI 일러스트`, 150, 345);
+                
+                ctx.font = '14px Arial';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.fillText(`${features.age || '??'}세 ${features.gender || '??'} • 신뢰도 ${Math.round(face.confidence * 100)}%`, 150, 365);
+                ctx.fillText(`등장 ${face.appearances}회 • ${face.firstAppearance}`, 150, 385);
+                
+                return canvas.toDataURL('image/png');
+            }
+
+            function parseAIDescription(description) {
+                const features = {
+                    age: null,
+                    gender: null,
+                    skinTone: 'light',
+                    hairStyle: 'short',
+                    hairColor: 'black',
+                    faceShape: 'oval',
+                    eyeSize: 'medium',
+                    eyeColor: 'brown',
+                    expression: 'neutral'
+                };
+                
+                if (!description) return features;
+                
+                const desc = description.toLowerCase();
+                
+                // 나이 추출
+                const ageMatch = desc.match(/(\d+)세|(\d+)대/);
+                if (ageMatch) {
+                    features.age = ageMatch[1] || (ageMatch[2] ? parseInt(ageMatch[2]) * 10 + 5 : null);
+                }
+                
+                // 성별 추출
+                if (desc.includes('남성') || desc.includes('남자')) features.gender = 'male';
+                if (desc.includes('여성') || desc.includes('여자')) features.gender = 'female';
+                
+                // 피부톤
+                if (desc.includes('밝은') || desc.includes('하얀')) features.skinTone = 'light';
+                if (desc.includes('어두운') || desc.includes('검은')) features.skinTone = 'dark';
+                if (desc.includes('중간') || desc.includes('보통')) features.skinTone = 'medium';
+                
+                // 헤어스타일
+                if (desc.includes('긴')) features.hairStyle = 'long';
+                if (desc.includes('짧은')) features.hairStyle = 'short';
+                if (desc.includes('웨이브') || desc.includes('곱슬')) features.hairStyle = 'wavy';
+                
+                // 헤어컬러
+                if (desc.includes('갈색')) features.hairColor = 'brown';
+                if (desc.includes('금색') || desc.includes('블론드')) features.hairColor = 'blonde';
+                if (desc.includes('빨간') || desc.includes('빨강')) features.hairColor = 'red';
+                
+                // 얼굴형
+                if (desc.includes('둥근') || desc.includes('원형')) features.faceShape = 'round';
+                if (desc.includes('각진') || desc.includes('사각')) features.faceShape = 'square';
+                
+                // 눈 크기
+                if (desc.includes('큰 눈') || desc.includes('커다란 눈')) features.eyeSize = 'large';
+                if (desc.includes('작은 눈')) features.eyeSize = 'small';
+                
+                // 표정
+                if (desc.includes('미소') || desc.includes('웃')) features.expression = 'smile';
+                if (desc.includes('진지') || desc.includes('심각')) features.expression = 'serious';
+                
+                return features;
+            }
+
+            function drawHair(ctx, features) {
+                const hairColors = {
+                    black: '#2d3436',
+                    brown: '#6c5ce7',
+                    blonde: '#fdcb6e',
+                    red: '#e17055'
+                };
+                
+                ctx.fillStyle = hairColors[features.hairColor] || hairColors.black;
+                
+                if (features.hairStyle === 'long') {
+                    // 긴 머리
+                    ctx.beginPath();
+                    ctx.ellipse(150, 120, 90, 40, 0, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // 머리카락 옆면
+                    ctx.beginPath();
+                    ctx.ellipse(100, 160, 25, 60, -0.3, 0, 2 * Math.PI);
+                    ctx.ellipse(200, 160, 25, 60, 0.3, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else {
+                    // 짧은 머리
+                    ctx.beginPath();
+                    ctx.ellipse(150, 130, 80, 50, 0, 0, Math.PI);
+                    ctx.fill();
+                }
+            }
+
+            function drawEyes(ctx, features) {
+                const eyeSize = features.eyeSize === 'large' ? 12 : features.eyeSize === 'small' ? 6 : 9;
+                
+                // 눈 흰자
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(130, 160, eyeSize, eyeSize * 0.7, 0, 0, 2 * Math.PI);
+                ctx.ellipse(170, 160, eyeSize, eyeSize * 0.7, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // 눈동자
+                const eyeColors = {
+                    brown: '#8b4513',
+                    blue: '#4169e1',
+                    green: '#228b22',
+                    black: '#000000'
+                };
+                ctx.fillStyle = eyeColors[features.eyeColor] || eyeColors.brown;
+                ctx.beginPath();
+                ctx.ellipse(130, 160, eyeSize * 0.6, eyeSize * 0.6, 0, 0, 2 * Math.PI);
+                ctx.ellipse(170, 160, eyeSize * 0.6, eyeSize * 0.6, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // 눈동자 하이라이트
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(132, 158, 2, 2, 0, 0, 2 * Math.PI);
+                ctx.ellipse(172, 158, 2, 2, 0, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            function drawEyebrows(ctx, features) {
+                ctx.strokeStyle = '#2d3436';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                
+                // 왼쪽 눈썹
+                ctx.beginPath();
+                ctx.moveTo(115, 145);
+                ctx.quadraticCurveTo(130, 140, 145, 145);
+                ctx.stroke();
+                
+                // 오른쪽 눈썹
+                ctx.beginPath();
+                ctx.moveTo(155, 145);
+                ctx.quadraticCurveTo(170, 140, 185, 145);
+                ctx.stroke();
+            }
+
+            function drawNose(ctx, features) {
+                ctx.strokeStyle = '#fab1a0';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(150, 170);
+                ctx.lineTo(145, 185);
+                ctx.moveTo(150, 185);
+                ctx.lineTo(155, 185);
+                ctx.stroke();
+            }
+
+            function drawLips(ctx, features) {
+                ctx.fillStyle = '#e17055';
+                
+                if (features.expression === 'smile') {
+                    // 웃는 입
+                    ctx.beginPath();
+                    ctx.arc(150, 200, 15, 0, Math.PI);
+                    ctx.fill();
+                } else {
+                    // 일반 입
+                    ctx.beginPath();
+                    ctx.ellipse(150, 200, 12, 6, 0, 0, 2 * Math.PI);
+                    ctx.fill();
                 }
             }
 
@@ -4483,6 +5453,89 @@ ${optionsText}
                     }
                 }
             };
+
+            window.uploadFaceImage = function(faceId) {
+                const face = detectedFaces.find(f => f.id === faceId);
+                if (!face) return;
+
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.style.display = 'none';
+                
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            // 업로드된 이미지를 프로세싱
+                            processUploadedFaceImage(event.target.result, face);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                    document.body.removeChild(fileInput);
+                });
+                
+                document.body.appendChild(fileInput);
+                fileInput.click();
+            };
+
+            function processUploadedFaceImage(imageDataUrl, face) {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 300;
+                    canvas.height = 400;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 배경 그라데이션
+                    const gradient = ctx.createLinearGradient(0, 0, 300, 400);
+                    gradient.addColorStop(0, '#f8f9fa');
+                    gradient.addColorStop(1, '#e9ecef');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, 300, 400);
+                    
+                    // 이미지를 원형으로 클리핑
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(150, 200, 120, 0, 2 * Math.PI);
+                    ctx.clip();
+                    
+                    // 업로드된 이미지 그리기 (비율 유지하며 중앙에 배치)
+                    const imgSize = Math.min(img.width, img.height);
+                    const srcX = (img.width - imgSize) / 2;
+                    const srcY = (img.height - imgSize) / 2;
+                    
+                    ctx.drawImage(img, srcX, srcY, imgSize, imgSize, 30, 80, 240, 240);
+                    ctx.restore();
+                    
+                    // 원형 테두리
+                    ctx.strokeStyle = '#17a2b8';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(150, 200, 120, 0, 2 * Math.PI);
+                    ctx.stroke();
+                    
+                    // 정보 텍스트
+                    ctx.fillStyle = '#2d3436';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(face.name, 150, 50);
+                    
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#636e72';
+                    ctx.fillText(`${face.role === 'main' ? '주연' : '조연'} • 사용자 업로드`, 150, 350);
+                    ctx.fillText(`신뢰도 ${Math.round(face.confidence * 100)}% • ${face.appearances}회 등장`, 150, 370);
+                    
+                    // 업로드 완료 메시지
+                    addMessage('ai', `✅ ${face.name}의 얼굴 이미지가 업로드되었습니다!`);
+                    
+                    // 이미지 저장 및 표시
+                    face.generatedImage = canvas.toDataURL('image/jpeg', 0.9);
+                    updateFaceCardWithImage(face);
+                };
+                img.src = imageDataUrl;
+            }
 
             window.deleteFace = function(faceId) {
                 if (confirm('이 배우를 삭제하시겠습니까?')) {
