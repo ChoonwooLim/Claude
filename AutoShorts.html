@@ -799,6 +799,42 @@
             color: #1a202c; /* Dark text for light inputs in dark mode */
         }
 
+        /* 폴더 선택 상태별 스타일 */
+        .setting-input.folder-selected {
+            border-color: #28a745 !important;
+            background-color: #d4edda !important;
+        }
+
+        .setting-input.folder-not-selected {
+            border-color: #ffc107 !important;
+            background-color: #fff3cd !important;
+        }
+
+        .control-btn.folder-selected {
+            background-color: #28a745 !important;
+            color: white !important;
+            border-color: #28a745 !important;
+        }
+
+        .control-btn.folder-not-selected {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+            border-color: #ffc107 !important;
+            animation: pulse-folder 2s infinite;
+        }
+
+        @keyframes pulse-folder {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+            }
+        }
+
         #videoEditorContainer {
             width: 100%;
             background: #000;
@@ -2361,16 +2397,23 @@
                 try {
                     if ('showDirectoryPicker' in window) {
                         outputFolderHandle = await window.showDirectoryPicker();
-                        outputFolder.value = outputFolderHandle.name;
-                        localStorage.setItem('outputFolderName', outputFolderHandle.name);
-                        addMessage('ai', `📁 저장 폴더가 "${outputFolderHandle.name}"로 설정되었습니다.`);
+                        const folderName = outputFolderHandle.name;
+                        outputFolder.value = folderName;
+                        localStorage.setItem('outputFolderName', folderName);
+                        
+                        // 폴더 선택 후 시각적 상태 업데이트
+                        updateFolderStatus(true, folderName);
+                        addMessage('ai', `✅ 저장 폴더가 "${folderName}"로 설정되었습니다. 이제 영상 처리 완료 후 자동으로 이 폴더에 저장됩니다.`);
                     } else {
                         // Fallback for browsers that don't support File System Access API
                         const folderPath = prompt('저장할 폴더 경로를 입력하세요:', 'C:\\AutoShorts\\Output');
                         if (folderPath) {
                             outputFolder.value = folderPath;
                             localStorage.setItem('outputFolderPath', folderPath);
-                            addMessage('ai', `📁 저장 경로가 "${folderPath}"로 설정되었습니다.`);
+                            
+                            // 폴더 선택 후 시각적 상태 업데이트
+                            updateFolderStatus(true, folderPath);
+                            addMessage('ai', `✅ 저장 경로가 "${folderPath}"로 설정되었습니다. 이제 영상 처리 완료 후 자동으로 이 폴더에 저장됩니다.`);
                         }
                     }
                 } catch (error) {
@@ -2422,10 +2465,18 @@
             async function autoSaveShorts() {
                 if (!autoSave.checked) return;
                 
+                // 저장 폴더 확인
+                const currentFolder = outputFolder.value;
+                if (!currentFolder) {
+                    addMessage('ai', '⚠️ 저장 폴더가 선택되지 않았습니다. 먼저 저장 폴더를 선택해주세요.');
+                    updateFolderStatus(false);
+                    return;
+                }
+                
                 let savedCount = 0;
                 const totalShorts = allGeneratedShorts.length;
                 
-                addMessage('ai', `💾 ${totalShorts}개의 숏츠를 자동 저장하고 있습니다...`);
+                addMessage('ai', `💾 ${totalShorts}개의 숏츠를 "${currentFolder}" 폴더에 자동 저장하고 있습니다...`);
                 
                 for (let i = 0; i < allGeneratedShorts.length; i++) {
                     const shortElement = allGeneratedShorts[i];
@@ -2447,18 +2498,30 @@
                 savedShortsCount += savedCount;
                 localStorage.setItem('savedShortsCount', savedShortsCount.toString());
                 
-                addMessage('ai', `✅ ${savedCount}/${totalShorts}개의 숏츠가 성공적으로 저장되었습니다!`);
+                if (savedCount === totalShorts) {
+                    addMessage('ai', `✅ ${savedCount}개의 숏츠가 모두 "${currentFolder}" 폴더에 성공적으로 저장되었습니다!`);
+                } else {
+                    addMessage('ai', `⚠️ ${savedCount}/${totalShorts}개의 숏츠가 저장되었습니다. ${totalShorts - savedCount}개는 저장에 실패했습니다.`);
+                }
             }
 
             // Individual download function
             window.downloadSingleShort = function(button, index) {
+                // 저장 폴더 확인
+                const currentFolder = outputFolder.value;
+                if (!currentFolder) {
+                    addMessage('ai', '⚠️ 저장 폴더가 선택되지 않았습니다. 먼저 저장 폴더를 선택해주세요.');
+                    updateFolderStatus(false);
+                    return;
+                }
+                
                 const shortElement = button.closest('.short-item');
                 const video = shortElement.querySelector('video');
                 const fileName = generateFileName(index);
                 
                 saveVideoFile(video, fileName).then(success => {
                     if (success) {
-                        addMessage('ai', `💾 숏츠 #${index}가 "${fileName}" 이름으로 저장되었습니다.`);
+                        addMessage('ai', `💾 숏츠 #${index}가 "${currentFolder}" 폴더에 "${fileName}" 이름으로 저장되었습니다.`);
                         
                         // Add saved badge if not already present
                         const shortInfo = shortElement.querySelector('.short-info');
@@ -2492,14 +2555,56 @@
                 const savedFolderPath = localStorage.getItem('outputFolderPath');
                 const savedCount = localStorage.getItem('savedShortsCount');
                 
+                // 처음 실행시 빈 상태로 표시
                 if (savedFolderName) {
                     outputFolder.value = savedFolderName;
+                    updateFolderStatus(true, savedFolderName);
+                    // 기존 폴더 설정 알림
+                    setTimeout(() => {
+                        addMessage('ai', `📁 이전에 설정한 저장 폴더 "${savedFolderName}"를 불러왔습니다. 영상 처리 완료 후 자동으로 이 폴더에 저장됩니다.`);
+                    }, 1000);
                 } else if (savedFolderPath) {
                     outputFolder.value = savedFolderPath;
+                    updateFolderStatus(true, savedFolderPath);
+                    // 기존 폴더 설정 알림
+                    setTimeout(() => {
+                        addMessage('ai', `📁 이전에 설정한 저장 경로 "${savedFolderPath}"를 불러왔습니다. 영상 처리 완료 후 자동으로 이 경로에 저장됩니다.`);
+                    }, 1000);
+                } else {
+                    // 처음 실행 - 빈 상태 명시적 표시
+                    outputFolder.value = '';
+                    outputFolder.placeholder = '📁 저장 폴더를 먼저 선택해주세요';
+                    updateFolderStatus(false);
+                    // 폴더 선택 안내 메시지
+                    setTimeout(() => {
+                        addMessage('ai', '👋 환영합니다! 영상 처리를 시작하기 전에 저장 폴더를 먼저 선택해주세요. 📁 버튼을 클릭하여 폴더를 지정하면 다음부터는 자동으로 설정됩니다.');
+                    }, 1500);
                 }
                 
                 if (savedCount) {
                     savedShortsCount = parseInt(savedCount, 10);
+                }
+            }
+
+            // 폴더 선택 상태를 시각적으로 표시하는 함수
+            function updateFolderStatus(isSelected, folderName = '') {
+                const selectFolderBtn = document.getElementById('selectFolderBtn');
+                const outputFolder = document.getElementById('outputFolder');
+                
+                if (isSelected && folderName) {
+                    // 폴더가 선택된 상태
+                    outputFolder.className = 'setting-input folder-selected';
+                    selectFolderBtn.className = 'control-btn folder-selected';
+                    selectFolderBtn.innerHTML = '✅';
+                    selectFolderBtn.title = `현재 폴더: ${folderName}`;
+                    outputFolder.placeholder = `현재 선택: ${folderName}`;
+                } else {
+                    // 폴더가 선택되지 않은 상태 (처음 실행)
+                    outputFolder.className = 'setting-input folder-not-selected';
+                    selectFolderBtn.className = 'control-btn folder-not-selected';
+                    selectFolderBtn.innerHTML = '📁';
+                    selectFolderBtn.title = '저장 폴더를 선택하세요 (필수)';
+                    outputFolder.placeholder = '📁 저장 폴더를 먼저 선택해주세요';
                 }
             }
 
