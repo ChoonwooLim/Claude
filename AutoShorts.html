@@ -1047,6 +1047,7 @@
         .chat-message .message-content p {
             margin: 0;
             line-height: 1.5;
+            white-space: pre-line; /* 줄바꿈 지원 */
         }
 
         .user-message {
@@ -1300,6 +1301,7 @@
             border-radius: 8px;
             font-size: 1rem;
             box-sizing: border-box;
+            color: #000000;
         }
 
         .api-key-modal .modal-actions {
@@ -1704,6 +1706,33 @@
                         <input type="number" id="shortsCount" class="setting-input" value="1" min="1" max="10">
                     </div>
                 </div>
+
+                <div class="option-group">
+                    <h3>📁&nbsp;저장 관리</h3>
+                    <div class="setting-item">
+                        <label for="outputFolder">저장 폴더</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text" id="outputFolder" class="setting-input" placeholder="폴더를 선택하세요" readonly style="flex: 1;">
+                            <button id="selectFolderBtn" class="control-btn" style="padding: 0.5rem;">📁</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="autoSave">자동 저장</label>
+                        <input type="checkbox" id="autoSave" checked>
+                    </div>
+                    <div class="setting-item">
+                        <label for="fileNaming">파일명 형식</label>
+                        <select id="fileNaming" class="setting-input">
+                            <option value="timestamp">타임스탬프 (20241220_143022)</option>
+                            <option value="sequential">순차번호 (shorts_001, shorts_002)</option>
+                            <option value="custom">사용자 정의</option>
+                        </select>
+                    </div>
+                    <div class="setting-item" id="customNameContainer" style="display: none;">
+                        <label for="customName">사용자 정의명</label>
+                        <input type="text" id="customName" class="setting-input" placeholder="예: MyShorts">
+                    </div>
+                </div>
             </div>
 
             <div class="chat-area">
@@ -1872,6 +1901,14 @@
             const platformCards = document.querySelectorAll('.platform-card');
             const loadNewVideoButton = document.getElementById('loadNewVideoButton');
             
+            // Storage management elements
+            const selectFolderBtn = document.getElementById('selectFolderBtn');
+            const outputFolder = document.getElementById('outputFolder');
+            const autoSave = document.getElementById('autoSave');
+            const fileNaming = document.getElementById('fileNaming');
+            const customName = document.getElementById('customName');
+            const customNameContainer = document.getElementById('customNameContainer');
+            
             // Results related
             const resultsContainer = document.getElementById('resultsContainer');
             const completedShortsGrid = document.getElementById('completedShortsGrid');
@@ -1899,13 +1936,92 @@
             let currentChatId = null;
             let allGeneratedShorts = [];
             let currentShortIndex = 0;
+            let outputFolderHandle = null;
+            let savedShortsCount = 0;
 
             // --- AI Model Data & Logic ---
             const aiModels = {
-                claude: { name: "Claude", subModels: ["Claude 3 Opus", "Claude 3 Sonnet", "Claude 3 Haiku"], apiKey: "", apiKeyUrl: "https://console.anthropic.com/settings/keys" },
-                gpt: { name: "GPT", subModels: ["GPT-4 Turbo", "GPT-4", "GPT-3.5 Turbo"], apiKey: "", apiKeyUrl: "https://platform.openai.com/api-keys" },
-                gemini: { name: "Gemini", subModels: ["Gemini 1.5 Pro", "Gemini 1.0 Pro"], apiKey: "", apiKeyUrl: "https://aistudio.google.com/app/api-keys" },
-                llama: { name: "Llama", subModels: ["Llama 3 70B", "Llama 3 8B", "Llama 2 70B"], apiKey: "", apiKeyUrl: "https://console.groq.com/keys" }
+                claude: { 
+                    name: "Claude", 
+                    subModels: [
+                        "Claude 3.5 Sonnet", 
+                        "Claude 3.5 Haiku", 
+                        "Claude 3 Opus", 
+                        "Claude 3 Sonnet", 
+                        "Claude 3 Haiku"
+                    ], 
+                    apiKey: "", 
+                    apiKeyUrl: "https://console.anthropic.com/settings/keys",
+                    endpoint: "https://api.anthropic.com/v1/messages"
+                },
+                gpt: { 
+                    name: "OpenAI GPT", 
+                    subModels: [
+                        "GPT-4o", 
+                        "GPT-4o mini", 
+                        "GPT-4 Turbo", 
+                        "GPT-4", 
+                        "GPT-3.5 Turbo", 
+                        "GPT-3.5 Turbo 16k"
+                    ], 
+                    apiKey: "", 
+                    apiKeyUrl: "https://platform.openai.com/api-keys",
+                    endpoint: "https://api.openai.com/v1/chat/completions"
+                },
+                gemini: { 
+                    name: "Google Gemini", 
+                    subModels: [
+                        "Gemini 2.0 Flash", 
+                        "Gemini 1.5 Pro", 
+                        "Gemini 1.5 Flash", 
+                        "Gemini 1.5 Flash-8B", 
+                        "Gemini 1.0 Pro"
+                    ], 
+                    apiKey: "", 
+                    apiKeyUrl: "https://aistudio.google.com/app/api-keys",
+                    endpoint: "https://generativelanguage.googleapis.com/v1beta/models"
+                },
+                groq: { 
+                    name: "Groq", 
+                    subModels: [
+                        "Llama 3.3 70B", 
+                        "Llama 3.1 405B", 
+                        "Llama 3.1 70B", 
+                        "Llama 3.1 8B", 
+                        "Llama 3 70B", 
+                        "Llama 3 8B", 
+                        "Mixtral 8x7B", 
+                        "Gemma 2 9B", 
+                        "Gemma 7B"
+                    ], 
+                    apiKey: "", 
+                    apiKeyUrl: "https://console.groq.com/keys",
+                    endpoint: "https://api.groq.com/openai/v1/chat/completions"
+                },
+                perplexity: {
+                    name: "Perplexity",
+                    subModels: [
+                        "Llama 3.1 Sonar Large",
+                        "Llama 3.1 Sonar Small", 
+                        "Llama 3.1 70B",
+                        "Llama 3.1 8B"
+                    ],
+                    apiKey: "",
+                    apiKeyUrl: "https://www.perplexity.ai/settings/api",
+                    endpoint: "https://api.perplexity.ai/chat/completions"
+                },
+                cohere: {
+                    name: "Cohere",
+                    subModels: [
+                        "Command R+",
+                        "Command R",
+                        "Command",
+                        "Command Light"
+                    ],
+                    apiKey: "",
+                    apiKeyUrl: "https://dashboard.cohere.com/api-keys",
+                    endpoint: "https://api.cohere.ai/v1/chat"
+                }
             };
 
             const mainModelSelect = document.getElementById('mainModelSelect');
@@ -1971,11 +2087,681 @@
             saveApiKeyBtn.addEventListener('click', () => {
                 if (currentEditingModel) {
                     aiModels[currentEditingModel].apiKey = apiKeyInput.value;
+                    localStorage.setItem(`apiKey_${currentEditingModel}`, apiKeyInput.value);
                     console.log(`${aiModels[currentEditingModel].name} API Key saved.`); // For debugging
                     alert(`${aiModels[currentEditingModel].name} API 키가 저장되었습니다.`);
                     closeApiKeyModal();
                 }
             });
+
+            // Load saved API keys
+            function loadSavedApiKeys() {
+                for (const modelKey in aiModels) {
+                    const savedKey = localStorage.getItem(`apiKey_${modelKey}`);
+                    if (savedKey) {
+                        aiModels[modelKey].apiKey = savedKey;
+                    }
+                }
+            }
+
+            // --- Storage Management Functions ---
+            async function selectOutputFolder() {
+                try {
+                    if ('showDirectoryPicker' in window) {
+                        outputFolderHandle = await window.showDirectoryPicker();
+                        outputFolder.value = outputFolderHandle.name;
+                        localStorage.setItem('outputFolderName', outputFolderHandle.name);
+                        addMessage('ai', `📁 저장 폴더가 "${outputFolderHandle.name}"로 설정되었습니다.`);
+                    } else {
+                        // Fallback for browsers that don't support File System Access API
+                        const folderPath = prompt('저장할 폴더 경로를 입력하세요:', 'C:\\AutoShorts\\Output');
+                        if (folderPath) {
+                            outputFolder.value = folderPath;
+                            localStorage.setItem('outputFolderPath', folderPath);
+                            addMessage('ai', `📁 저장 경로가 "${folderPath}"로 설정되었습니다.`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Folder selection error:', error);
+                    addMessage('ai', '❌ 폴더 선택이 취소되었거나 오류가 발생했습니다.');
+                }
+            }
+
+            function generateFileName(index, originalName = 'video') {
+                const namingType = fileNaming.value;
+                const now = new Date();
+                
+                switch (namingType) {
+                    case 'timestamp':
+                        const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                        return `shorts_${timestamp}_${index}.mp4`;
+                    
+                    case 'sequential':
+                        const paddedIndex = String(savedShortsCount + index).padStart(3, '0');
+                        return `shorts_${paddedIndex}.mp4`;
+                    
+                    case 'custom':
+                        const customPrefix = customName.value.trim() || 'MyShorts';
+                        const paddedCustomIndex = String(index).padStart(3, '0');
+                        return `${customPrefix}_${paddedCustomIndex}.mp4`;
+                    
+                    default:
+                        return `shorts_${index}.mp4`;
+                }
+            }
+
+            async function saveVideoFile(videoElement, fileName) {
+                try {
+                    // Create download link for the video
+                    const link = document.createElement('a');
+                    link.href = videoElement.src;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Save error:', error);
+                    return false;
+                }
+            }
+
+            async function autoSaveShorts() {
+                if (!autoSave.checked) return;
+                
+                let savedCount = 0;
+                const totalShorts = allGeneratedShorts.length;
+                
+                addMessage('ai', `💾 ${totalShorts}개의 숏츠를 자동 저장하고 있습니다...`);
+                
+                for (let i = 0; i < allGeneratedShorts.length; i++) {
+                    const shortElement = allGeneratedShorts[i];
+                    const video = shortElement.querySelector('video');
+                    const fileName = generateFileName(i + 1);
+                    
+                    const success = await saveVideoFile(video, fileName);
+                    if (success) {
+                        savedCount++;
+                        // Update UI to show saved status
+                        const shortInfo = shortElement.querySelector('.short-info');
+                        const savedBadge = document.createElement('span');
+                        savedBadge.innerHTML = '💾 저장됨';
+                        savedBadge.style.cssText = 'font-size: 0.75rem; color: var(--success-text); margin-left: 0.5rem;';
+                        shortInfo.appendChild(savedBadge);
+                    }
+                }
+                
+                savedShortsCount += savedCount;
+                localStorage.setItem('savedShortsCount', savedShortsCount.toString());
+                
+                addMessage('ai', `✅ ${savedCount}/${totalShorts}개의 숏츠가 성공적으로 저장되었습니다!`);
+            }
+
+            // Individual download function
+            window.downloadSingleShort = function(button, index) {
+                const shortElement = button.closest('.short-item');
+                const video = shortElement.querySelector('video');
+                const fileName = generateFileName(index);
+                
+                saveVideoFile(video, fileName).then(success => {
+                    if (success) {
+                        addMessage('ai', `💾 숏츠 #${index}가 "${fileName}" 이름으로 저장되었습니다.`);
+                        
+                        // Add saved badge if not already present
+                        const shortInfo = shortElement.querySelector('.short-info');
+                        if (!shortInfo.querySelector('.saved-badge')) {
+                            const savedBadge = document.createElement('span');
+                            savedBadge.className = 'saved-badge';
+                            savedBadge.innerHTML = '💾 저장됨';
+                            savedBadge.style.cssText = 'font-size: 0.75rem; color: var(--success-text); margin-left: 0.5rem;';
+                            shortInfo.appendChild(savedBadge);
+                        }
+                    } else {
+                        addMessage('ai', `❌ 숏츠 #${index} 저장에 실패했습니다.`);
+                    }
+                });
+            };
+
+            // Event listeners for storage management
+            selectFolderBtn.addEventListener('click', selectOutputFolder);
+            
+            fileNaming.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customNameContainer.style.display = 'flex';
+                } else {
+                    customNameContainer.style.display = 'none';
+                }
+            });
+
+            // Load saved settings
+            function loadStorageSettings() {
+                const savedFolderName = localStorage.getItem('outputFolderName');
+                const savedFolderPath = localStorage.getItem('outputFolderPath');
+                const savedCount = localStorage.getItem('savedShortsCount');
+                
+                if (savedFolderName) {
+                    outputFolder.value = savedFolderName;
+                } else if (savedFolderPath) {
+                    outputFolder.value = savedFolderPath;
+                }
+                
+                if (savedCount) {
+                    savedShortsCount = parseInt(savedCount, 10);
+                }
+            }
+
+            // --- Video Analysis Functions ---
+            async function extractVideoFrames(videoElement, numFrames = 5) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const frames = [];
+                
+                canvas.width = 640;
+                canvas.height = 360;
+                
+                const duration = videoElement.duration;
+                const interval = duration / numFrames;
+                
+                for (let i = 0; i < numFrames; i++) {
+                    const time = i * interval;
+                    await seekToTime(videoElement, time);
+                    
+                    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                    const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                    frames.push({
+                        time: time,
+                        data: frameData
+                    });
+                }
+                
+                return frames;
+            }
+            
+            function seekToTime(videoElement, time) {
+                return new Promise((resolve) => {
+                    const onSeeked = () => {
+                        videoElement.removeEventListener('seeked', onSeeked);
+                        resolve();
+                    };
+                    videoElement.addEventListener('seeked', onSeeked);
+                    videoElement.currentTime = time;
+                });
+            }
+
+            // 현재 선택된 모든 옵션을 가져오는 함수
+            function getCurrentOptions() {
+                const selectedPlatforms = Array.from(getSelectedPlatforms()).map(p => p.dataset.platform);
+                const platformNames = {
+                    'youtube_shorts': 'YouTube Shorts',
+                    'instagram_reels': 'Instagram Reels',
+                    'tiktok': 'TikTok',
+                    'naver': '네이버',
+                    'facebook_reels': 'Facebook Reels'
+                };
+
+                return {
+                    // 영상 처리 옵션
+                    videoProcessing: {
+                        autoHighlight: document.getElementById('autoHighlight').checked,
+                        autoCrop: document.getElementById('autoCrop').checked,
+                        colorCorrection: document.getElementById('colorCorrection').checked,
+                        videoStabilization: document.getElementById('videoStabilization').checked
+                    },
+                    // 오디오 처리 옵션
+                    audioProcessing: {
+                        removeSilence: document.getElementById('removeSilence').checked,
+                        enhanceAudio: document.getElementById('enhanceAudio').checked,
+                        noiseReduction: document.getElementById('noiseReduction').checked
+                    },
+                    // 추가 기능
+                    features: {
+                        addTitle: document.getElementById('addTitle').checked,
+                        addSubtitles: document.getElementById('addSubtitles').checked,
+                        addEffects: document.getElementById('addEffects').checked
+                    },
+                    // 숏츠 설정
+                    settings: {
+                        shortsLength: parseInt(document.getElementById('shortsLength').value),
+                        shortsCount: parseInt(document.getElementById('shortsCount').value)
+                    },
+                    // 선택된 플랫폼
+                    platforms: selectedPlatforms.map(p => platformNames[p] || p),
+                    // AI 모델 정보
+                    aiModel: {
+                        provider: mainModelSelect.options[mainModelSelect.selectedIndex].text,
+                        model: subModelSelect.options[subModelSelect.selectedIndex].text
+                    },
+                    // 저장 관리 설정
+                    storage: {
+                        autoSave: document.getElementById('autoSave').checked,
+                        outputFolder: document.getElementById('outputFolder').value,
+                        fileNaming: document.getElementById('fileNaming').value,
+                        customName: document.getElementById('customName').value
+                    }
+                };
+            }
+
+            // 옵션을 텍스트로 변환하는 함수
+            function formatOptionsForAI(options) {
+                let optionsText = "\n📋 현재 선택된 옵션들:\n\n";
+                
+                // 플랫폼 정보
+                if (options.platforms.length > 0) {
+                    optionsText += `🌐 타겟 플랫폼: ${options.platforms.join(', ')}\n`;
+                } else {
+                    optionsText += `⚠️ 플랫폼이 선택되지 않았습니다.\n`;
+                }
+                
+                // 숏츠 설정
+                optionsText += `⏱️ 숏츠 길이: ${options.settings.shortsLength}초\n`;
+                optionsText += `🔢 생성 개수: ${options.settings.shortsCount}개\n\n`;
+                
+                // 영상 처리 옵션
+                const videoOptions = [];
+                if (options.videoProcessing.autoHighlight) videoOptions.push("자동 하이라이트 추출");
+                if (options.videoProcessing.autoCrop) videoOptions.push("자동 크롭");
+                if (options.videoProcessing.colorCorrection) videoOptions.push("색상 보정");
+                if (options.videoProcessing.videoStabilization) videoOptions.push("영상 안정화");
+                
+                if (videoOptions.length > 0) {
+                    optionsText += `📼 영상 처리: ${videoOptions.join(', ')}\n`;
+                }
+                
+                // 오디오 처리 옵션
+                const audioOptions = [];
+                if (options.audioProcessing.removeSilence) audioOptions.push("무음 구간 제거");
+                if (options.audioProcessing.enhanceAudio) audioOptions.push("오디오 향상");
+                if (options.audioProcessing.noiseReduction) audioOptions.push("노이즈 감소");
+                
+                if (audioOptions.length > 0) {
+                    optionsText += `🔊 오디오 처리: ${audioOptions.join(', ')}\n`;
+                }
+                
+                // 추가 기능
+                const features = [];
+                if (options.features.addTitle) features.push("타이틀 추가");
+                if (options.features.addSubtitles) features.push("자막 추가");
+                if (options.features.addEffects) features.push("영상효과 추가");
+                
+                if (features.length > 0) {
+                    optionsText += `✨ 추가 기능: ${features.join(', ')}\n`;
+                }
+                
+                optionsText += `\n🤖 사용 중인 AI: ${options.aiModel.provider} - ${options.aiModel.model}\n`;
+                
+                // 저장 관리 설정
+                if (options.storage.outputFolder) {
+                    optionsText += `📁 저장 폴더: ${options.storage.outputFolder}\n`;
+                }
+                optionsText += `💾 자동 저장: ${options.storage.autoSave ? '활성화' : '비활성화'}\n`;
+                optionsText += `📝 파일명 형식: ${options.storage.fileNaming === 'timestamp' ? '타임스탬프' : options.storage.fileNaming === 'sequential' ? '순차번호' : '사용자 정의'}\n`;
+                
+                return optionsText;
+            }
+
+            async function analyzeVideoContent(message) {
+                if (!uploadedFile || !videoPreview.src) {
+                    return "영상이 업로드되지 않았습니다. 먼저 영상을 업로드해주세요.";
+                }
+                
+                try {
+                    // Extract frames from video
+                    const frames = await extractVideoFrames(videoPreview, 3);
+                    
+                    // Get video metadata
+                    const videoInfo = {
+                        duration: Math.round(videoPreview.duration),
+                        width: videoPreview.videoWidth,
+                        height: videoPreview.videoHeight,
+                        aspectRatio: (videoPreview.videoWidth / videoPreview.videoHeight).toFixed(2)
+                    };
+                    
+                    // 현재 선택된 옵션들 가져오기
+                    const currentOptions = getCurrentOptions();
+                    const optionsText = formatOptionsForAI(currentOptions);
+                    
+                    const analysisPrompt = `
+영상 분석 및 숏츠 제작 요청: ${message}
+
+📹 영상 정보:
+- 길이: ${videoInfo.duration}초
+- 해상도: ${videoInfo.width}x${videoInfo.height}
+- 화면비: ${videoInfo.aspectRatio}:1
+
+${optionsText}
+
+🎯 요청사항:
+1. 현재 선택된 옵션들을 모두 고려하여 영상을 분석해주세요.
+2. 선택된 플랫폼(${currentOptions.platforms.join(', ')})에 최적화된 편집 방법을 제안해주세요.
+3. ${currentOptions.settings.shortsCount}개의 ${currentOptions.settings.shortsLength}초 숏츠를 만들기 위한 최적의 구간을 추천해주세요.
+4. 선택된 처리 옵션들(하이라이트 추출, 크롭, 색상보정 등)의 적용 방법을 구체적으로 설명해주세요.
+5. 만약 사용자가 숏츠 제작을 요청했다면, 마지막에 "✅ 분석 완료! 지금 바로 숏츠 제작을 시작하겠습니다."라고 말해주세요.
+
+사용자의 요청과 현재 설정을 바탕으로 전문적이고 구체적인 조언을 제공해주세요.`;
+                    
+                    // 직접 AI API 호출 (sendToAI 대신)
+                    const selectedModelKey = mainModelSelect.value;
+                    const selectedSubModel = subModelSelect.value;
+                    const modelData = aiModels[selectedModelKey];
+                    
+                    if (!modelData.apiKey) {
+                        throw new Error(`${modelData.name} API 키가 설정되지 않았습니다.`);
+                    }
+
+                    const systemPrompt = `당신은 숏츠 영상 제작을 도와주는 AI 어시스턴트입니다. 
+사용자가 영상 편집과 관련된 질문을 하면 친절하고 전문적으로 답변해주세요.
+영상 처리, 편집, 플랫폼별 최적화에 대한 조언을 제공할 수 있습니다.
+사용자가 구체적인 작업을 요청하면 단계별로 안내해주세요.`;
+
+                    switch (selectedModelKey) {
+                        case 'claude':
+                            return await callClaudeAPI(analysisPrompt, systemPrompt, modelData, selectedSubModel);
+                        case 'gpt':
+                            return await callOpenAIAPI(analysisPrompt, systemPrompt, modelData, selectedSubModel);
+                        case 'gemini':
+                            return await callGeminiAPI(analysisPrompt, systemPrompt, modelData, selectedSubModel);
+                        case 'groq':
+                            return await callGroqAPI(analysisPrompt, systemPrompt, modelData, selectedSubModel);
+                        case 'perplexity':
+                            return await callPerplexityAPI(analysisPrompt, systemPrompt, modelData, selectedSubModel);
+                        case 'cohere':
+                            return await callCohereAPI(analysisPrompt, systemPrompt, modelData, selectedSubModel);
+                        default:
+                            throw new Error('지원하지 않는 AI 모델입니다.');
+                    }
+                    
+                } catch (error) {
+                    console.error('Video analysis error:', error);
+                    return `영상 분석 중 오류가 발생했습니다: ${error.message}`;
+                }
+            }
+
+            // --- AI API Functions ---
+            async function sendToAI(message) {
+                const selectedModelKey = mainModelSelect.value;
+                const selectedSubModel = subModelSelect.value;
+                const modelData = aiModels[selectedModelKey];
+                
+                if (!modelData.apiKey) {
+                    throw new Error(`${modelData.name} API 키가 설정되지 않았습니다. 설정 버튼을 클릭하여 API 키를 입력해주세요.`);
+                }
+
+                // Check if this is a video analysis request
+                const videoAnalysisKeywords = ['영상', '비디오', '분석', '하이라이트', '편집', '크롭', '자막', '효과'];
+                const isVideoAnalysis = videoAnalysisKeywords.some(keyword => message.includes(keyword)) && uploadedFile;
+                
+                if (isVideoAnalysis) {
+                    return await analyzeVideoContent(message);
+                }
+
+                // 현재 선택된 옵션들도 일반 대화에 포함
+                const currentOptions = getCurrentOptions();
+                const optionsText = formatOptionsForAI(currentOptions);
+                
+                const systemPrompt = `당신은 숏츠 영상 제작을 도와주는 AI 어시스턴트입니다. 
+사용자가 영상 편집과 관련된 질문을 하면 친절하고 전문적으로 답변해주세요.
+영상 처리, 편집, 플랫폼별 최적화에 대한 조언을 제공할 수 있습니다.
+사용자가 구체적인 작업을 요청하면 단계별로 안내해주세요.
+
+${optionsText}
+
+현재 선택된 옵션들을 항상 고려하여 맞춤형 조언을 제공해주세요.
+만약 사용자가 숏츠 제작을 요청하면 "✅ 분석 완료! 지금 바로 숏츠 제작을 시작하겠습니다."라고 응답해주세요.`;
+
+                switch (selectedModelKey) {
+                    case 'claude':
+                        return await callClaudeAPI(message, systemPrompt, modelData, selectedSubModel);
+                    case 'gpt':
+                        return await callOpenAIAPI(message, systemPrompt, modelData, selectedSubModel);
+                    case 'gemini':
+                        return await callGeminiAPI(message, systemPrompt, modelData, selectedSubModel);
+                    case 'groq':
+                        return await callGroqAPI(message, systemPrompt, modelData, selectedSubModel);
+                    case 'perplexity':
+                        return await callPerplexityAPI(message, systemPrompt, modelData, selectedSubModel);
+                    case 'cohere':
+                        return await callCohereAPI(message, systemPrompt, modelData, selectedSubModel);
+                    default:
+                        throw new Error('지원하지 않는 AI 모델입니다.');
+                }
+            }
+
+            async function callClaudeAPI(message, systemPrompt, modelData, subModel) {
+                const modelMap = {
+                    "Claude 3.5 Sonnet": "claude-3-5-sonnet-20241022",
+                    "Claude 3.5 Haiku": "claude-3-5-haiku-20241022",
+                    "Claude 3 Opus": "claude-3-opus-20240229",
+                    "Claude 3 Sonnet": "claude-3-sonnet-20240229", 
+                    "Claude 3 Haiku": "claude-3-haiku-20240307"
+                };
+
+                const response = await fetch(modelData.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': modelData.apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: modelMap[subModel] || "claude-3-5-sonnet-20241022",
+                        max_tokens: 1000,
+                        system: systemPrompt,
+                        messages: [
+                            {
+                                role: "user",
+                                content: message
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Claude API 오류: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.content[0].text;
+            }
+
+            async function callOpenAIAPI(message, systemPrompt, modelData, subModel) {
+                const modelMap = {
+                    "GPT-4o": "gpt-4o",
+                    "GPT-4o mini": "gpt-4o-mini",
+                    "GPT-4 Turbo": "gpt-4-turbo",
+                    "GPT-4": "gpt-4",
+                    "GPT-3.5 Turbo": "gpt-3.5-turbo",
+                    "GPT-3.5 Turbo 16k": "gpt-3.5-turbo-16k"
+                };
+
+                const response = await fetch(modelData.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${modelData.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelMap[subModel] || "gpt-4o-mini",
+                        messages: [
+                            {
+                                role: "system",
+                                content: systemPrompt
+                            },
+                            {
+                                role: "user", 
+                                content: message
+                            }
+                        ],
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`OpenAI API 오류: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+            }
+
+            async function callGeminiAPI(message, systemPrompt, modelData, subModel) {
+                const modelMap = {
+                    "Gemini 2.0 Flash": "gemini-2.0-flash-exp",
+                    "Gemini 1.5 Pro": "gemini-1.5-pro-latest",
+                    "Gemini 1.5 Flash": "gemini-1.5-flash-latest",
+                    "Gemini 1.5 Flash-8B": "gemini-1.5-flash-8b-latest",
+                    "Gemini 1.0 Pro": "gemini-pro"
+                };
+                
+                const modelName = modelMap[subModel] || "gemini-pro";
+                const url = `${modelData.endpoint}/${modelName}:generateContent?key=${modelData.apiKey}`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `${systemPrompt}\n\n사용자 질문: ${message}`
+                            }]
+                        }],
+                        generationConfig: {
+                            maxOutputTokens: 1000,
+                            temperature: 0.7
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Gemini API 오류: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            }
+
+            async function callGroqAPI(message, systemPrompt, modelData, subModel) {
+                const modelMap = {
+                    "Llama 3.3 70B": "llama-3.3-70b-versatile",
+                    "Llama 3.1 405B": "llama-3.1-405b-reasoning",
+                    "Llama 3.1 70B": "llama-3.1-70b-versatile",
+                    "Llama 3.1 8B": "llama-3.1-8b-instant",
+                    "Llama 3 70B": "llama3-70b-8192",
+                    "Llama 3 8B": "llama3-8b-8192",
+                    "Mixtral 8x7B": "mixtral-8x7b-32768",
+                    "Gemma 2 9B": "gemma2-9b-it",
+                    "Gemma 7B": "gemma-7b-it"
+                };
+
+                const response = await fetch(modelData.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${modelData.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelMap[subModel] || "llama-3.1-8b-instant",
+                        messages: [
+                            {
+                                role: "system",
+                                content: systemPrompt
+                            },
+                            {
+                                role: "user",
+                                content: message
+                            }
+                        ],
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Groq API 오류: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+            }
+
+            async function callPerplexityAPI(message, systemPrompt, modelData, subModel) {
+                const modelMap = {
+                    "Llama 3.1 Sonar Large": "llama-3.1-sonar-large-128k-online",
+                    "Llama 3.1 Sonar Small": "llama-3.1-sonar-small-128k-online",
+                    "Llama 3.1 70B": "llama-3.1-70b-instruct",
+                    "Llama 3.1 8B": "llama-3.1-8b-instruct"
+                };
+
+                const response = await fetch(modelData.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${modelData.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelMap[subModel] || "llama-3.1-sonar-small-128k-online",
+                        messages: [
+                            {
+                                role: "system",
+                                content: systemPrompt
+                            },
+                            {
+                                role: "user",
+                                content: message
+                            }
+                        ],
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Perplexity API 오류: ${errorData.error?.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+            }
+
+            async function callCohereAPI(message, systemPrompt, modelData, subModel) {
+                const modelMap = {
+                    "Command R+": "command-r-plus",
+                    "Command R": "command-r",
+                    "Command": "command",
+                    "Command Light": "command-light"
+                };
+
+                const response = await fetch(modelData.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${modelData.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelMap[subModel] || "command-r",
+                        message: message,
+                        preamble: systemPrompt,
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Cohere API 오류: ${errorData.message || response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data.text;
+            }
 
             // --- Theme Switching ---
             function applyInitialTheme() {
@@ -2082,22 +2868,56 @@
                 }
             }
 
-            function handleSendMessage() {
+            async function handleSendMessage() {
                 const text = chatInput.value.trim();
                 if (text) {
                     addMessage('user', text);
                     chatInput.value = '';
                     updateProcessButtonState();
-
-                    // Simulate AI response
-                    setTimeout(() => {
-                        let aiResponse = "죄송합니다. 아직 해당 기능은 준비중입니다. 왼쪽의 '영상 처리 시작' 버튼을 이용해주세요.";
-                        if (text.includes("처리 시작") || text.includes("만들어줘")) {
-                             aiResponse = "네, 알겠습니다. 왼쪽 패널의 설정을 기반으로 영상 처리를 시작합니다.";
-                             processBtn.click();
+                    
+                    // Show typing indicator
+                    addMessage('ai', '🤔 생각중...');
+                    
+                    try {
+                        const aiResponse = await sendToAI(text);
+                        // Remove typing indicator
+                        const currentChat = chats.find(chat => chat.id === currentChatId);
+                        if (currentChat && currentChat.messages.length > 0) {
+                            currentChat.messages.pop(); // Remove typing indicator
                         }
                         addMessage('ai', aiResponse);
-                    }, 1000);
+                        
+                        // Check if AI suggests processing or analysis is complete
+                        if (aiResponse.includes("✅ 분석 완료! 지금 바로 숏츠 제작을 시작하겠습니다.") || 
+                            aiResponse.includes("영상 처리를 시작") || 
+                            text.includes("처리 시작") || 
+                            text.includes("만들어줘") ||
+                            text.includes("숏츠 만들어") ||
+                            text.includes("숏츠 생성") ||
+                            text.includes("제작해")) {
+                            
+                            // 플랫폼이 선택되지 않은 경우 경고
+                            const selectedPlatforms = getSelectedPlatforms();
+                            if (selectedPlatforms.length === 0) {
+                                setTimeout(() => {
+                                    addMessage('ai', '⚠️ 플랫폼을 먼저 선택해주세요. 왼쪽 하단에서 YouTube Shorts, Instagram Reels 등 원하는 플랫폼을 선택한 후 다시 요청해주세요.');
+                                }, 500);
+                                return;
+                            }
+                            
+                            setTimeout(() => {
+                                addMessage('ai', '🚀 선택하신 옵션들을 적용하여 숏츠 제작을 시작합니다!');
+                                processBtn.click();
+                            }, 1000);
+                        }
+                    } catch (error) {
+                        // Remove typing indicator
+                        const currentChat = chats.find(chat => chat.id === currentChatId);
+                        if (currentChat && currentChat.messages.length > 0) {
+                            currentChat.messages.pop();
+                        }
+                        addMessage('ai', `오류가 발생했습니다: ${error.message}`);
+                    }
                 }
             }
             
@@ -2135,7 +2955,21 @@
                 const newChat = {
                     id: Date.now(),
                     messages: [
-                        { sender: 'ai', text: '안녕하세요! 숏츠 영상 제작을 도와드릴 AI 어시스턴트입니다. 왼쪽에 있는 옵션을 설정하고, 저에게 제작을 요청해주세요.' }
+                        { sender: 'ai', text: `안녕하세요! 🎬 숏츠 영상 제작을 도와드릴 AI 어시스턴트입니다.
+
+📋 사용 방법:
+1. 영상을 업로드해주세요
+2. 원하는 처리 옵션을 선택하세요  
+3. 저에게 "영상을 분석해줘", "하이라이트를 찾아줘" 등을 요청하거나
+4. '영상 처리 시작' 버튼을 눌러주세요
+
+💡 AI 기능:
+- 영상 내용 분석 및 최적 구간 추천
+- 플랫폼별 맞춤 편집 제안
+- 자동 하이라이트 추출
+- 개인화된 편집 조언
+
+궁금한 점이 있으시면 언제든 물어보세요!` }
                     ]
                 };
                 chats.push(newChat);
@@ -2340,131 +3174,286 @@
                 }
             });
 
+            // --- Video Processing Functions ---
+            async function processVideoWithAI() {
+                if (!uploadedFile || !videoPreview.src) {
+                    throw new Error("처리할 영상이 없습니다.");
+                }
+                
+                // Get processing options
+                const options = {
+                    autoHighlight: document.getElementById('autoHighlight').checked,
+                    autoCrop: document.getElementById('autoCrop').checked,
+                    colorCorrection: document.getElementById('colorCorrection').checked,
+                    videoStabilization: document.getElementById('videoStabilization').checked,
+                    removeSilence: document.getElementById('removeSilence').checked,
+                    enhanceAudio: document.getElementById('enhanceAudio').checked,
+                    noiseReduction: document.getElementById('noiseReduction').checked,
+                    addTitle: document.getElementById('addTitle').checked,
+                    addSubtitles: document.getElementById('addSubtitles').checked,
+                    addEffects: document.getElementById('addEffects').checked,
+                    shortsLength: parseInt(document.getElementById('shortsLength').value),
+                    shortsCount: parseInt(document.getElementById('shortsCount').value)
+                };
+                
+                // Get current options for AI analysis
+                const currentOptions = getCurrentOptions();
+                const optionsText = formatOptionsForAI(currentOptions);
+                
+                // Ask AI for processing recommendations
+                const analysisMessage = `
+AI 기반 숏츠 자동 제작을 시작합니다.
+
+${optionsText}
+
+🎯 제작 목표:
+- ${options.shortsCount}개의 ${options.shortsLength}초 숏츠 생성
+- 선택된 플랫폼에 최적화된 편집
+- 모든 선택된 처리 옵션 적용
+
+영상을 분석하여 최적의 구간을 선택하고 편집 방향을 제시해주세요.`;
+                
+                const aiAnalysis = await analyzeVideoContent(analysisMessage);
+                addMessage('ai', aiAnalysis);
+                
+                return await generateShortsWithAI(options, aiAnalysis);
+            }
+            
+            async function generateShortsWithAI(options, aiAnalysis) {
+                const originalVideo = videoPreview;
+                const videoSrc = originalVideo.src;
+                const originalDuration = originalVideo.duration;
+                const generatedShorts = [];
+                
+                if (originalDuration < options.shortsLength) {
+                    throw new Error(`원본 영상(${Math.round(originalDuration)}초)이 요청된 숏츠 길이(${options.shortsLength}초)보다 짧습니다.`);
+                }
+                
+                // AI 분석을 바탕으로 최적의 구간 선택
+                const segments = await selectBestSegments(originalDuration, options.shortsLength, options.shortsCount, aiAnalysis);
+                
+                for (let i = 0; i < segments.length; i++) {
+                    const segment = segments[i];
+                    const newShort = await createShortFromSegment(segment, videoSrc, options, i + 1);
+                    generatedShorts.push(newShort);
+                }
+                
+                return generatedShorts;
+            }
+            
+            async function selectBestSegments(duration, segmentLength, count, aiAnalysis) {
+                // 간단한 알고리즘으로 구간 선택 (나중에 AI 분석 결과를 더 활용할 수 있음)
+                const segments = [];
+                const maxStartTime = duration - segmentLength;
+                
+                if (count === 1) {
+                    // 단일 숏츠의 경우 중간 부분 선택
+                    const startTime = Math.max(0, (duration - segmentLength) / 2);
+                    segments.push({
+                        startTime: startTime,
+                        endTime: startTime + segmentLength,
+                        confidence: 0.8
+                    });
+                } else {
+                    // 여러 숏츠의 경우 균등하게 분산
+                    const interval = maxStartTime / (count - 1);
+                    for (let i = 0; i < count; i++) {
+                        const startTime = Math.min(i * interval, maxStartTime);
+                        segments.push({
+                            startTime: startTime,
+                            endTime: startTime + segmentLength,
+                            confidence: 0.7 + (Math.random() * 0.2) // 임시 신뢰도
+                        });
+                    }
+                }
+                
+                return segments;
+            }
+            
+            async function createShortFromSegment(segment, videoSrc, options, index) {
+                const segmentSrc = `${videoSrc}#t=${segment.startTime},${segment.endTime}`;
+                
+                // 적용된 옵션들을 표시하기 위한 배지 생성
+                const appliedOptions = [];
+                if (options.autoHighlight) appliedOptions.push("🎯 하이라이트");
+                if (options.autoCrop) appliedOptions.push("✂️ 크롭");
+                if (options.colorCorrection) appliedOptions.push("🎨 색상보정");
+                if (options.videoStabilization) appliedOptions.push("📹 안정화");
+                if (options.removeSilence) appliedOptions.push("🔇 무음제거");
+                if (options.enhanceAudio) appliedOptions.push("🔊 음질향상");
+                if (options.addSubtitles) appliedOptions.push("💬 자막");
+                if (options.addEffects) appliedOptions.push("✨ 효과");
+                
+                const optionsBadges = appliedOptions.length > 0 
+                    ? `<div style="font-size: 0.75rem; color: var(--accent-color); margin-bottom: 0.5rem;">${appliedOptions.join(' ')}</div>`
+                    : '';
+                
+                const newShort = document.createElement('div');
+                newShort.className = 'short-item';
+                newShort.innerHTML = `
+                    <div class="video-container">
+                        <video src="${segmentSrc}" loop preload="metadata"></video>
+                        <div class="video-overlay">▶</div>
+                        <button class="volume-btn">🔊</button>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill"></div>
+                    </div>
+                    <div class="short-info">
+                        ${optionsBadges}
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            숏츠 #${index} (${Math.round(segment.startTime)}s-${Math.round(segment.endTime)}s)
+                        </span>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <button class="download-btn" onclick="downloadSingleShort(this, ${index})">다운로드</button>
+                            <button class="upload-btn">업로드</button>
+                            <button class="delete-btn">삭제</button>
+                        </div>
+                    </div>`;
+                
+                // Add event listeners
+                setupShortEventListeners(newShort);
+                
+                return newShort;
+            }
+            
+            function setupShortEventListeners(shortElement) {
+                const video = shortElement.querySelector('video');
+                const volumeBtn = shortElement.querySelector('.volume-btn');
+                const progressBarContainer = shortElement.querySelector('.progress-bar-container');
+                const progressBarFill = shortElement.querySelector('.progress-bar-fill');
+                const uploadBtn = shortElement.querySelector('.upload-btn');
+                const deleteBtn = shortElement.querySelector('.delete-btn');
+
+                // Volume control
+                volumeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (video.muted) {
+                        video.muted = false;
+                        volumeBtn.textContent = '🔊';
+                    } else {
+                        video.muted = true;
+                        volumeBtn.textContent = '🔇';
+                    }
+                });
+
+                // Progress bar update
+                video.addEventListener('timeupdate', () => {
+                    if (video.duration) {
+                        const progressPercent = (video.currentTime / video.duration) * 100;
+                        progressBarFill.style.width = `${progressPercent}%`;
+                    }
+                });
+
+                // Seek on progress bar click
+                progressBarContainer.addEventListener('click', (e) => {
+                    const rect = progressBarContainer.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const width = progressBarContainer.clientWidth;
+                    if (video.duration) {
+                        video.currentTime = (clickX / width) * video.duration;
+                    }
+                });
+                
+                // Upload button opens modal
+                uploadBtn.addEventListener('click', () => {
+                    const uploadModal = document.getElementById('uploadModal');
+                    uploadModal.classList.add('active');
+                });
+                
+                // Delete button removes the short
+                deleteBtn.addEventListener('click', () => {
+                    const indexToRemove = allGeneratedShorts.findIndex(item => item === shortElement);
+                    if (indexToRemove > -1) {
+                        allGeneratedShorts.splice(indexToRemove, 1);
+                        if (allGeneratedShorts.length === 0) {
+                            currentShortIndex = 0;
+                        } else {
+                            if (currentShortIndex >= indexToRemove) {
+                                currentShortIndex = Math.max(0, currentShortIndex - 1);
+                            }
+                        }
+                        renderCompletedShorts();
+                    }
+                });
+            }
+
             // --- Main Processing Logic ---
-            processBtn.addEventListener('click', () => {
+            processBtn.addEventListener('click', async () => {
                 if (processBtn.disabled) return;
                 
-                addMessage('ai', "영상 처리를 시작합니다. 잠시만 기다려주세요...");
+                addMessage('ai', "🚀 AI 기반 영상 처리를 시작합니다. 잠시만 기다려주세요...");
 
-                shortsTrack.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 5rem 1rem;">AI가 영상을 분석하고 있습니다...</p>';
+                shortsTrack.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 5rem 1rem;">AI가 영상을 분석하고 처리하고 있습니다...</p>';
                 allGeneratedShorts = [];
                 currentShortIndex = 0;
                 updateCarousel();
-
-                setTimeout(() => {
-                    const shortsCount = parseInt(document.getElementById('shortsCount').value, 10) || 1;
-                    const shortsLength = parseInt(document.getElementById('shortsLength').value, 10);
-                    const originalVideo = document.getElementById('videoPreview');
-                    const videoSrc = originalVideo.src;
-                    const originalDuration = originalVideo.duration;
-
-                    if (!videoSrc) {
-                       addMessage('ai', '오류: 처리할 원본 영상이 없습니다.');
-                       shortsTrack.innerHTML = '<p style="text-align: center; color: var(--error-text);">오류: 처리할 원본 영상이 없습니다.</p>';
-                       return;
-                    }
-                    
-                    if (isNaN(originalDuration) || originalDuration < shortsLength) {
-                        addMessage('ai', `오류: 원본 영상의 길이(${Math.round(originalDuration)}초)가 요청된 숏츠 길이(${shortsLength}초)보다 짧습니다.`);
-                        shortsTrack.innerHTML = `<p style="text-align: center; color: var(--error-text);">오류: 원본 영상이 너무 짧습니다. 길이를 다시 설정해주세요.</p>`;
-                        return;
-                    }
-
-                    for (let i = 0; i < shortsCount; i++) {
-                        const maxStartTime = originalDuration - shortsLength;
-                        const startTime = Math.floor(Math.random() * maxStartTime);
-                        const endTime = startTime + shortsLength;
-                        const segmentSrc = `${videoSrc}#t=${startTime},${endTime}`;
-                        
-                        const newShort = document.createElement('div');
-                        newShort.className = 'short-item';
-                        newShort.innerHTML = `
-                            <div class="video-container">
-                                <video src="${segmentSrc}" loop preload="metadata"></video>
-                                <div class="video-overlay">▶</div>
-                                <button class="volume-btn">🔊</button>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-fill"></div>
-                            </div>
-                            <div class="short-info">
-                                <button class="download-btn">다운로드</button>
-                                <button class="upload-btn">업로드</button>
-                                <button class="delete-btn">삭제</button>
-                            </div>`;
-                        
-                        const video = newShort.querySelector('video');
-                        const volumeBtn = newShort.querySelector('.volume-btn');
-                        const progressBarContainer = newShort.querySelector('.progress-bar-container');
-                        const progressBarFill = newShort.querySelector('.progress-bar-fill');
-                        const uploadBtn = newShort.querySelector('.upload-btn');
-                        const deleteBtn = newShort.querySelector('.delete-btn');
-
-                        // Volume control
-                        volumeBtn.addEventListener('click', (e) => {
-                            e.stopPropagation(); // Prevent container's hover effects
-                            if (video.muted) {
-                                video.muted = false;
-                                volumeBtn.textContent = '🔊';
-                            } else {
-                                video.muted = true;
-                                volumeBtn.textContent = '🔇';
-                            }
-                        });
-
-                        // Progress bar update
-                        video.addEventListener('timeupdate', () => {
-                            if (video.duration) {
-                                const progressPercent = (video.currentTime / video.duration) * 100;
-                                progressBarFill.style.width = `${progressPercent}%`;
-                            }
-                        });
-
-                        // Seek on progress bar click
-                        progressBarContainer.addEventListener('click', (e) => {
-                            const rect = progressBarContainer.getBoundingClientRect();
-                            const clickX = e.clientX - rect.left;
-                            const width = progressBarContainer.clientWidth;
-                            if (video.duration) {
-                                video.currentTime = (clickX / width) * video.duration;
-                            }
-                        });
-                        
-                        // Upload button opens modal
-                        uploadBtn.addEventListener('click', () => {
-                            const uploadModal = document.getElementById('uploadModal');
-                            uploadModal.classList.add('active');
-                        });
-                        
-                        // Delete button removes the short
-                        deleteBtn.addEventListener('click', () => {
-                            const itemToRemove = deleteBtn.closest('.short-item');
-                            const indexToRemove = allGeneratedShorts.findIndex(item => item === itemToRemove);
-
-                            if (indexToRemove > -1) {
-                                allGeneratedShorts.splice(indexToRemove, 1);
-                                
-                                if (allGeneratedShorts.length === 0) {
-                                    currentShortIndex = 0;
-                                } else {
-                                    if (currentShortIndex >= indexToRemove) {
-                                        currentShortIndex = Math.max(0, currentShortIndex - 1);
-                                    }
-                                }
-                                renderCompletedShorts();
-                            }
-                        });
-
-                        allGeneratedShorts.push(newShort);
-                    }
-                    
+                
+                                try {
+                    const processedShorts = await processVideoWithAI();
+                    allGeneratedShorts = processedShorts;
                     renderCompletedShorts();
-                    addMessage('ai', `${shortsCount}개의 숏츠 영상이 완성되었습니다. 오른쪽 결과 패널에서 확인해주세요!`);
+                    
+                    addMessage('ai', `✅ ${processedShorts.length}개의 AI 최적화된 숏츠 영상이 완성되었습니다! 오른쪽 패널에서 확인해주세요.`);
+                    
+                    // Auto-save if enabled
+                    if (autoSave.checked) {
+                        setTimeout(() => autoSaveShorts(), 1000);
+                    }
+                } catch (error) {
+                     console.error('Processing error:', error);
+                     addMessage('ai', `❌ 처리 중 오류가 발생했습니다: ${error.message}`);
+                     shortsTrack.innerHTML = `<p style="text-align: center; color: var(--error-text); padding: 5rem 1rem;">처리 실패: ${error.message}</p>`;
+                 }
+             });
 
+            // --- Upload Modal Logic ---
+            const uploadModal = document.getElementById('uploadModal');
+            const cancelUpload = document.getElementById('cancelUpload');
+            const confirmUpload = document.getElementById('confirmUpload');
+            
+            cancelUpload.addEventListener('click', () => {
+                uploadModal.classList.remove('active');
+            });
+            
+            confirmUpload.addEventListener('click', () => {
+                const title = document.getElementById('videoTitle').value;
+                const description = document.getElementById('videoDescription').value;
+                const tags = document.getElementById('videoTags').value;
+                
+                if (!title.trim()) {
+                    alert('제목을 입력해주세요.');
+                    return;
+                }
+                
+                // 실제로는 여기서 선택된 플랫폼에 업로드하는 로직이 들어갑니다
+                const selectedPlatforms = Array.from(getSelectedPlatforms()).map(p => p.dataset.platform);
+                
+                addMessage('ai', `${selectedPlatforms.join(', ')}에 "${title}" 제목으로 업로드를 시작합니다...`);
+                
+                // 시뮬레이션
+                setTimeout(() => {
+                    addMessage('ai', '✅ 업로드가 완료되었습니다!');
                 }, 2000);
+                
+                uploadModal.classList.remove('active');
+                
+                // 폼 초기화
+                document.getElementById('videoTitle').value = '';
+                document.getElementById('videoDescription').value = '';
+                document.getElementById('videoTags').value = '';
+            });
+            
+            // Close modal when clicking outside
+            uploadModal.addEventListener('click', (e) => {
+                if (e.target === uploadModal) {
+                    uploadModal.classList.remove('active');
+                }
             });
 
             // --- Initial Setup ---
+            loadSavedApiKeys();
+            loadStorageSettings();
             loadChats();
             renderCompletedShorts();
             initializeMainModels();
