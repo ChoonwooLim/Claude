@@ -1,5 +1,9 @@
 // This file contains UI-related helper functions.
 
+const state = {
+    videoPlayer: null
+};
+
 // --- DOM Element Selectors ---
 const domElements = {
     themeToggle: document.getElementById('theme-toggle'),
@@ -225,4 +229,36 @@ function updateCarouselUI(currentIndex, total) {
     track.style.transform = `translateX(${offset}px)`;
     
     domElements.shortsCounter.textContent = `${currentIndex + 1} / ${total}`;
+}
+
+// --- Video Control Functions ---
+function playVideo() {
+    if (state.videoPlayer) state.videoPlayer.play();
+}
+
+function pauseVideo() {
+    if (state.videoPlayer) state.videoPlayer.pause();
+}
+
+function rewindVideo() {
+    if (state.videoPlayer) state.videoPlayer.currentTime = 0;
+}
+
+// --- Theme Management ---
+
+/**
+ * 페이지 로드 시 저장된 테마를 적용합니다.
+ */
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light-mode';
+    updateTheme(savedTheme === 'dark-mode');
+}
+
+/**
+ * 라이트/다크 모드를 토글하고 선택을 localStorage에 저장합니다.
+ */
+function toggleTheme() {
+    const isDarkMode = !document.body.classList.contains('dark-mode');
+    updateTheme(isDarkMode);
+    localStorage.setItem('theme', isDarkMode ? 'dark-mode' : 'light-mode');
 } 
