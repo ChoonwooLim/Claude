@@ -51,4 +51,21 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModalBtn.click();
         }
     });
+
+    // --- Face Analysis ---
+    domElements.faceAnalysisCheckbox.addEventListener('change', (e) => {
+        domElements.faceGalleryContainer.style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    domElements.analyzeFacesBtn.addEventListener('click', () => {
+        if (!state.uploadedFile) {
+            alert('얼굴 분석을 시작하기 전에 먼저 영상을 업로드해주세요.');
+            return;
+        }
+        // This function will be defined in face-analysis-modal.js
+        startFaceAnalysis();
+    });
+
+    // Initialize the application
+    initializeApp();
 }); 
