@@ -208,4 +208,8 @@ if (modalVideoElement) {
     document.addEventListener('DOMContentLoaded', () => {
          document.getElementById('face-video').addEventListener('modalopened', initializeModal);
     });
+}
+
+function openFaceAnalysisModal() {
+    console.log("Face Analysis Modal opened.");
 } 

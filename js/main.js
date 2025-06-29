@@ -76,23 +76,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelApiKeyBtn = document.getElementById('cancelApiKey');
 
 
-    // --- State Variables ---
-    let uploadedFile = null;
-    let chats = [];
-    let currentChatId = null;
-    let selectedPlatforms = [];
-    let outputFolderHandle = null;
-    let shortsCarouselIndex = 0;
-    let llmModels = {};
-    let currentProvider = '';
+    // --- Application State ---
+    let state = {
+        uploadedFile: null,
+        videoPlayer: null,
+        chats: [],
+        currentChatId: null,
+        generatedShorts: [],
+        currentShortsIndex: 0,
+        outputFolderHandle: null,
+        savedShortsCount: 0,
+        faceAnalysisInProgress: false,
+        faceApiModelsLoaded: false,
+        currentLlmProvider: 'claude',
+        llmModels: {
+            claude: { 
+                name: "Claude", 
+                subModels: ["claude-3-5-sonnet-20240620", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"], 
+                apiKey: "", 
+                apiKeyUrl: "https://console.anthropic.com/settings/keys",
+                endpoint: "https://api.anthropic.com/v1/messages"
+            },
+            openai: { 
+                name: "OpenAI GPT", 
+                subModels: ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"], 
+                apiKey: "", 
+                apiKeyUrl: "https://platform.openai.com/api-keys",
+                endpoint: "https://api.openai.com/v1/chat/completions"
+            },
+            google: { 
+                name: "Google Gemini", 
+                subModels: ["gemini-1.5-pro-latest", "gemini-pro"], 
+                apiKey: "", 
+                apiKeyUrl: "https://aistudio.google.com/app/api-keys",
+                endpoint: "https://generativelanguage.googleapis.com/v1beta/models"
+            },
+            groq: { 
+                name: "Groq", 
+                subModels: ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it"], 
+                apiKey: "", 
+                apiKeyUrl: "https://console.groq.com/keys",
+                endpoint: "https://api.groq.com/openai/v1/chat/completions"
+            }
+        }
+    };
 
     // --- Initialization ---
-
-    initializeTheme();
-    loadModelsAndSettings();
-    loadChatsFromLocalStorage();
-    renderChatList();
-    displayActiveChat();
+    initializeApp();
 
 
     // --- Event Listeners ---
@@ -182,10 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Theme
     function initializeTheme() {
-        if (localStorage.getItem('theme') === 'dark-mode') {
-            document.body.classList.add('dark-mode');
-            themeToggle.textContent = '☀️';
-        }
+        const isDarkMode = localStorage.getItem('theme') === 'dark-mode';
+        updateTheme(isDarkMode);
     }
 
     function toggleTheme() {
@@ -197,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // File Handling
     function handleFileUpload(file) {
-        uploadedFile = file;
+        state.uploadedFile = file;
         fileNameElement.textContent = `파일명: ${file.name}`;
         fileSizeElement.textContent = `파일 크기: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
         fileInfo.style.display = 'block';
@@ -236,12 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startProcessing() {
-        if (!uploadedFile) {
+        if (!state.uploadedFile) {
             alert("영상을 먼저 업로드해주세요.");
             return;
         }
         // Placeholder for processing logic
-        console.log("Processing started for:", uploadedFile.name);
+        console.log("Processing started for:", state.uploadedFile.name);
         console.log("Selected platforms:", selectedPlatforms);
         // This is where you would call your backend or video processing library.
         // For demonstration, we'll just simulate a result.
@@ -256,15 +284,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Storage
     async function selectOutputFolder() {
         try {
-            outputFolderHandle = await window.showDirectoryPicker();
-            const folderName = outputFolderHandle.name;
+            state.outputFolderHandle = await window.showDirectoryPicker();
+            const folderName = state.outputFolderHandle.name;
             outputFolder.value = folderName;
-            outputFolder.classList.add('folder-selected');
-            outputFolder.classList.remove('folder-not-selected');
-            selectFolderBtn.classList.add('folder-selected');
-            selectFolderBtn.classList.remove('folder-not-selected');
+            localStorage.setItem('outputFolderName', folderName);
+            updateFolderStatusUI(true, folderName);
+            addMessageToChat('ai', `Output folder set to "${folderName}".`);
         } catch (err) {
-            console.error("폴더 선택이 취소되었거나 오류가 발생했습니다.", err);
+            console.error("Folder selection cancelled.", err);
         }
     }
     
@@ -317,20 +344,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         resultsContainer.style.display = 'block';
-        prevShortBtn.style.display = shortsCarouselIndex > 0 ? 'block' : 'none';
-        nextShortBtn.style.display = shortsCarouselIndex < itemCount - 1 ? 'block' : 'none';
+        prevShortBtn.style.display = state.currentShortsIndex > 0 ? 'block' : 'none';
+        nextShortBtn.style.display = state.currentShortsIndex < itemCount - 1 ? 'block' : 'none';
         
-        const offset = -shortsCarouselIndex * shortsTrack.parentElement.offsetWidth;
+        const offset = -state.currentShortsIndex * shortsTrack.parentElement.offsetWidth;
         shortsTrack.style.transform = `translateX(${offset}px)`;
         
-        shortsCounter.textContent = `${shortsCarouselIndex + 1} / ${itemCount}`;
+        shortsCounter.textContent = `${state.currentShortsIndex + 1} / ${itemCount}`;
     }
 
     function moveCarousel(direction) {
         const itemCount = shortsTrack.children.length;
-        const newIndex = shortsCarouselIndex + direction;
+        let newIndex = state.currentShortsIndex + direction;
         if (newIndex >= 0 && newIndex < itemCount) {
-            shortsCarouselIndex = newIndex;
+            state.currentShortsIndex = newIndex;
             updateCarousel();
         }
     }
@@ -352,8 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }],
             createdAt: new Date().toISOString()
         };
-        chats.unshift(newChat);
-        currentChatId = newChat.id;
+        state.chats.unshift(newChat);
+        state.currentChatId = newChat.id;
         saveChatsToLocalStorage();
         renderChatList();
         displayActiveChat();
@@ -373,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addMessageToChat(role, content, isThinking = false) {
-        const activeChat = chats.find(c => c.id === currentChatId);
+        const activeChat = state.chats.find(c => c.id === state.currentChatId);
         if (!activeChat) return;
 
         if (isThinking) {
@@ -398,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayActiveChat() {
-        const activeChat = chats.find(c => c.id === currentChatId);
+        const activeChat = state.chats.find(c => c.id === state.currentChatId);
         chatHistory.innerHTML = '';
         if (activeChat) {
             activeChat.messages.forEach(msg => {
@@ -428,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Highlight active chat in the list
         document.querySelectorAll('.chat-list-item').forEach(item => item.classList.remove('active'));
-        const chatListItem = document.querySelector(`.chat-list-item[data-id="${currentChatId}"]`);
+        const chatListItem = document.querySelector(`.chat-list-item[data-id="${state.currentChatId}"]`);
         if (chatListItem) {
             chatListItem.classList.add('active');
         }
@@ -436,8 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderChatList() {
         chatList.innerHTML = '';
-        chats.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        chats.forEach(chat => {
+        state.chats.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        state.chats.forEach(chat => {
             const item = document.createElement('div');
             item.className = 'chat-list-item';
             item.dataset.id = chat.id;
@@ -445,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="checkbox" class="chat-checkbox">
                 <span class="chat-list-item-title">${chat.title}</span>
             `;
-            if (chat.id === currentChatId) {
+            if (chat.id === state.currentChatId) {
                 item.classList.add('active');
             }
             chatList.appendChild(item);
@@ -462,24 +489,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const chatId = chatItem.dataset.id;
-        currentChatId = chatId;
+        state.currentChatId = chatId;
         saveChatsToLocalStorage();
         displayActiveChat();
     }
 
     // Chat Data Management
     function saveChatsToLocalStorage() {
-        localStorage.setItem('chats', JSON.stringify(chats));
-        localStorage.setItem('currentChatId', currentChatId);
+        localStorage.setItem('chats', JSON.stringify(state.chats));
+        localStorage.setItem('currentChatId', state.currentChatId);
     }
 
     function loadChatsFromLocalStorage() {
-        chats = JSON.parse(localStorage.getItem('chats')) || [];
-        currentChatId = localStorage.getItem('currentChatId');
-        if (!currentChatId && chats.length > 0) {
-            currentChatId = chats[0].id;
+        state.chats = JSON.parse(localStorage.getItem('chats')) || [];
+        state.currentChatId = localStorage.getItem('currentChatId');
+        if (!state.currentChatId && state.chats.length > 0) {
+            state.currentChatId = state.chats[0].id;
         }
-        if (chats.length === 0) {
+        if (state.chats.length === 0) {
             createNewChat();
         }
     }
@@ -490,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveChatsToFile() {
-        const dataStr = JSON.stringify(chats, null, 2);
+        const dataStr = JSON.stringify(state.chats, null, 2);
         const blob = new Blob([dataStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -509,8 +536,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const loadedChats = JSON.parse(event.target.result);
                 // Basic validation
                 if (Array.isArray(loadedChats)) {
-                    chats = loadedChats;
-                    currentChatId = chats.length > 0 ? chats[0].id : null;
+                    state.chats = loadedChats;
+                    state.currentChatId = state.chats.length > 0 ? state.chats[0].id : null;
                     saveChatsToLocalStorage();
                     renderChatList();
                     displayActiveChat();
@@ -537,9 +564,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        chats = chats.filter(c => !selectedIds.includes(c.id));
-        if (selectedIds.includes(currentChatId)) {
-            currentChatId = chats.length > 0 ? chats[0].id : null;
+        state.chats = state.chats.filter(c => !selectedIds.includes(c.id));
+        if (selectedIds.includes(state.currentChatId)) {
+            state.currentChatId = state.chats.length > 0 ? state.chats[0].id : null;
         }
         
         saveChatsToLocalStorage();
@@ -550,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // API Key Modal
     function loadModelsAndSettings() {
         // This would typically be fetched from a config file or server
-        llmModels = {
+        state.llmModels = {
             'OpenAI': {
                 name: 'OpenAI',
                 models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
@@ -577,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        mainModelSelect.innerHTML = Object.keys(llmModels).map(p => `<option value="${p}">${llmModels[p].name}</option>`).join('');
+        mainModelSelect.innerHTML = Object.keys(state.llmModels).map(p => `<option value="${p}">${state.llmModels[p].name}</option>`).join('');
         
         const savedProvider = localStorage.getItem('llmProvider') || 'OpenAI';
         mainModelSelect.value = savedProvider;
@@ -586,17 +613,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function handleProviderChange() {
-        currentProvider = mainModelSelect.value;
-        const providerData = llmModels[currentProvider];
+        state.currentLlmProvider = mainModelSelect.value;
+        const providerData = state.llmModels[state.currentLlmProvider];
         subModelSelect.innerHTML = providerData.models.map(m => `<option value="${m}">${m}</option>`).join('');
-        localStorage.setItem('llmProvider', currentProvider);
+        localStorage.setItem('llmProvider', state.currentLlmProvider);
     }
 
     function openApiKeyModal() {
-        const providerData = llmModels[currentProvider];
+        const providerData = state.llmModels[state.currentLlmProvider];
         apiKeyModalTitle.textContent = `${providerData.name} API 키 설정`;
         apiKeyLink.href = providerData.link;
-        const savedKey = localStorage.getItem(`${currentProvider}_apiKey`);
+        const savedKey = localStorage.getItem(`apiKey_${state.currentLlmProvider}`);
         apiKeyInput.value = savedKey || '';
         apiKeyModal.style.display = 'block';
     }
@@ -608,8 +635,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveApiKey() {
         const key = apiKeyInput.value.trim();
         if (key) {
-            localStorage.setItem(`${currentProvider}_apiKey`, key);
-            alert(`${llmModels[currentProvider].name} API 키가 저장되었습니다.`);
+            localStorage.setItem(`apiKey_${state.currentLlmProvider}`, key);
+            alert(`${state.llmModels[state.currentLlmProvider].name} API 키가 저장되었습니다.`);
             closeApiKeyModal();
         } else {
             alert('API 키를 입력해주세요.');
@@ -617,7 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function sendChatToAI(message) {
-        const activeChat = chats.find(c => c.id === currentChatId);
+        const activeChat = state.chats.find(c => c.id === state.currentChatId);
         if (!activeChat) return;
         
         try {
@@ -661,16 +688,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function callLlmApi(prompt, history) {
-        const provider = mainModelSelect.value;
+        const provider = state.currentLlmProvider;
         const model = subModelSelect.value;
-        const apiKey = localStorage.getItem(`${provider}_apiKey`);
+        const apiKey = localStorage.getItem(`apiKey_${provider}`);
 
         if (!apiKey) {
             openApiKeyModal();
-            throw new Error(`${llmModels[provider].name} API 키가 설정되지 않았습니다. 설정 후 다시 시도해주세요.`);
+            throw new Error(`${state.llmModels[provider].name} API 키가 설정되지 않았습니다. 설정 후 다시 시도해주세요.`);
         }
 
-        const endpoint = llmModels[provider].endpoint;
+        const endpoint = state.llmModels[provider].endpoint;
         const headers = {
             'Content-Type': 'application/json'
         };
