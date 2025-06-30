@@ -24,15 +24,6 @@ function showUploadedFile(file) {
     DOM.videoPreviewSection.style.display = 'block';
 }
 
-function createVideoPlayer(file) {
-    const videoPlayer = document.createElement('video');
-    videoPlayer.src = URL.createObjectURL(file);
-    videoPlayer.controls = false;
-    DOM.originalVideoContainer.innerHTML = '';
-    DOM.originalVideoContainer.appendChild(videoPlayer);
-    return videoPlayer;
-}
-
 function updateVideoControls(enabled) {
     DOM.playBtn.disabled = !enabled;
     DOM.pauseBtn.disabled = !enabled;
@@ -391,6 +382,23 @@ function setupEventListeners() {
 
     DOM.faceAnalysisCheckbox.addEventListener('change', () => {
         DOM.faceGalleryContainer.style.display = DOM.faceAnalysisCheckbox.checked ? 'block' : 'none';
+    });
+
+    // Storage Management
+    DOM.fileNaming.addEventListener('change', () => {
+        const isCustom = DOM.fileNaming.value === 'custom';
+        DOM.customNameContainer.style.display = isCustom ? 'flex' : 'none';
+    });
+    
+    DOM.selectFolderBtn.addEventListener('click', () => {
+        alert("폴더 선택 기능은 데스크톱 앱에서 지원됩니다.");
+        // In a real desktop app (e.g., Electron), you would use:
+        // window.electronAPI.selectFolder().then(folderPath => {
+        //     if (folderPath) {
+        //         DOM.outputFolder.value = folderPath;
+        //         updateFolderStatusUI(true, folderPath);
+        //     }
+        // });
     });
 
     // API Modal & Model Selection
