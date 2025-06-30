@@ -27,32 +27,59 @@ async function waitForSeek(videoElement) {
     });
 }
 
-function drawFaceResult(face) {
-    const { detection, expressions, age, gender, descriptor } = face;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const { x, y, width, height } = detection.box;
+function displayGroupedFaceResults(faceGroups) {
+    DOM.faceResults.innerHTML = '';
 
-    const faceImage = document.createElement('img');
-    faceImage.src = face.image;
+    const title = document.createElement('h3');
+    title.innerHTML = `✅ <span style="color: var(--accent-color);">${faceGroups.length}</span>명의 실제 배우 얼굴을 정밀 분석했습니다!`;
+    title.style.textAlign = 'center';
+    title.style.marginBottom = '2rem';
+    DOM.faceResults.appendChild(title);
 
-    faceImage.onload = () => {
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(faceImage, x, y, width, height, 0, 0, width, height);
+    const grid = document.createElement('div');
+    grid.className = 'face-card-grid';
 
-        const container = document.createElement('div');
-        container.classList.add('face-result-item');
+    faceGroups.forEach((group, index) => {
+        // Find the best detection in the group (e.g., largest, highest confidence)
+        const representativeFace = group.sort((a, b) => (b.detection.box.width * b.detection.box.height) - (a.detection.box.width * a.detection.box.height))[0];
+        const { detection, expressions, age, gender, image } = representativeFace;
 
-        const imgElement = document.createElement('img');
-        imgElement.src = canvas.toDataURL();
-        imgElement.title = `표정: ${Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b)}
-성별: ${gender === 'male' ? '남성' : '여성'}
-나이: ${Math.round(age)}세`;
+        const card = document.createElement('div');
+        card.className = 'face-card';
 
-        container.appendChild(imgElement);
-        DOM.faceResults.appendChild(container);
-    };
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+            const { x, y, width, height } = detection.box;
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+            card.querySelector('.face-image-container').style.backgroundImage = `url(${canvas.toDataURL()})`;
+        };
+        img.src = image;
+
+        const mainExpression = Object.entries(expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+
+        card.innerHTML = `
+            <div class="face-image-container"></div>
+            <div class="face-info">
+                <h4>배우 ${index + 1}</h4>
+                <p><strong>신뢰도:</strong> ${Math.round(detection.score * 100)}%</p>
+                <p><strong>나이:</strong> 약 ${Math.round(age)}세</p>
+                <p><strong>성별:</strong> ${gender === 'male' ? '남성' : '여성'}</p>
+                <p><strong>주요 표정:</strong> ${mainExpression}</p>
+            </div>
+            <div class="face-actions">
+                <button class="btn-edit">수정</button>
+                <button class="btn-upload">이미지 업로드</button>
+                <button class="btn-delete">삭제</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    DOM.faceResults.appendChild(grid);
 }
 
 export async function analyzeFaces(videoElement) {
@@ -67,12 +94,13 @@ export async function analyzeFaces(videoElement) {
     DOM.analysisProgress.style.display = 'block';
     DOM.faceResults.innerHTML = '';
 
-    const foundFaces = [];
-    let faceMatcher = null;
-    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.7 });
     const videoDuration = videoElement.duration;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    
+    const faceGroups = [];
+    const distanceThreshold = 0.5;
 
     videoElement.pause();
 
@@ -90,34 +118,26 @@ export async function analyzeFaces(videoElement) {
             .withAgeAndGender()
             .withFaceDescriptors();
 
-        if (detections.length > 0) {
-            if (!faceMatcher) {
-                // First found faces
-                detections.forEach(det => {
-                    const faceData = {
-                        ...det,
-                        image: canvas.toDataURL()
-                    };
-                    foundFaces.push(faceData);
-                    drawFaceResult(faceData);
-                });
-                const labeledDescriptors = foundFaces.map((f, idx) => new faceapi.LabeledFaceDescriptors(`person${idx}`, [f.descriptor]));
-                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
-            } else {
-                for (const det of detections) {
-                    const bestMatch = faceMatcher.findBestMatch(det.descriptor);
-                    if (bestMatch.label === 'unknown') {
-                        const faceData = {
-                            ...det,
-                            image: canvas.toDataURL()
-                        };
-                        foundFaces.push(faceData);
-                        drawFaceResult(faceData);
-                        
-                        const labeledDescriptors = foundFaces.map((f, idx) => new faceapi.LabeledFaceDescriptors(`person${idx}`, [f.descriptor]));
-                        faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
-                    }
+        for (const detection of detections) {
+            let bestMatchingGroup = null;
+            let minDistance = Infinity;
+
+            for (const group of faceGroups) {
+                const representative = group[0];
+                const distance = faceapi.euclideanDistance(detection.descriptor, representative.descriptor);
+                
+                if (distance < distanceThreshold && distance < minDistance) {
+                    minDistance = distance;
+                    bestMatchingGroup = group;
                 }
+            }
+            
+            const detectionWithImage = { ...detection, image: canvas.toDataURL() };
+
+            if (bestMatchingGroup) {
+                bestMatchingGroup.push(detectionWithImage);
+            } else {
+                faceGroups.push([detectionWithImage]);
             }
         }
         
@@ -126,10 +146,16 @@ export async function analyzeFaces(videoElement) {
         DOM.faceProgressText.textContent = `${Math.round(progress)}%`;
     }
 
-    console.log("얼굴 분석 완료:", foundFaces);
+    console.log("얼굴 분석 완료. 총 그룹 수:", faceGroups.length);
     DOM.analysisProgress.style.display = 'none';
     DOM.analyzeFacesBtn.disabled = false;
     DOM.analyzeFacesBtn.textContent = "얼굴 분석 시작";
     
-    return foundFaces;
+    if (faceGroups.length > 0) {
+        displayGroupedFaceResults(faceGroups);
+    } else {
+        DOM.faceResults.innerHTML = '<p style="text-align: center;">영상에서 얼굴을 찾지 못했습니다.</p>';
+    }
+
+    return faceGroups;
 } 

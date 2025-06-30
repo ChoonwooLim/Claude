@@ -100,11 +100,11 @@ function openApiKeyModalUI(modelData) {
     DOM.apiKeyModalTitle.textContent = `${modelData.name} API 키 설정`;
     DOM.apiKeyInput.value = modelData.apiKey || '';
     DOM.apiKeyLink.href = modelData.apiKeyUrl;
-    DOM.apiKeyModal.style.display = 'block';
+    DOM.apiKeyModal.classList.add('show');
 }
 
 function closeApiKeyModalUI() {
-    DOM.apiKeyModal.style.display = 'none';
+    DOM.apiKeyModal.classList.remove('show');
 }
 
 function updateFolderStatusUI(isSelected, folderName = '') {
@@ -392,13 +392,6 @@ function setupEventListeners() {
     
     DOM.selectFolderBtn.addEventListener('click', () => {
         alert("폴더 선택 기능은 데스크톱 앱에서 지원됩니다.");
-        // In a real desktop app (e.g., Electron), you would use:
-        // window.electronAPI.selectFolder().then(folderPath => {
-        //     if (folderPath) {
-        //         DOM.outputFolder.value = folderPath;
-        //         updateFolderStatusUI(true, folderPath);
-        //     }
-        // });
     });
 
     // API Modal & Model Selection
