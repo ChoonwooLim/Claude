@@ -1,99 +1,98 @@
-export const domElements = {
-    // General
-    themeToggle: document.getElementById('theme-toggle'),
-    loadNewVideoButton: document.getElementById('loadNewVideoButton'),
-    
-    // Upload
-    uploadContainer: document.getElementById('uploadContainer'),
-    fileInput: document.getElementById('file-input'),
-    fileInfo: document.getElementById('fileInfo'),
-    fileName: document.getElementById('fileName'),
-    fileSize: document.getElementById('fileSize'),
+export const themeToggle = document.getElementById('theme-toggle');
 
-    // Video Preview
-    videoPreviewSection: document.getElementById('videoPreviewSection'),
-    originalVideoContainer: document.getElementById('originalVideoContainer'),
-    videoEditorContainer: document.getElementById('videoEditorContainer'),
-    videoPreview: document.getElementById('videoPreview'),
-    playBtn: document.getElementById('playBtn'),
-    pauseBtn: document.getElementById('pauseBtn'),
-    rewindBtn: document.getElementById('rewindBtn'),
-    
-    // Controls
-    processBtn: document.getElementById('processBtn'),
-    platformCards: document.querySelectorAll('.platform-card'),
-    
-    // Options
-    faceAnalysisCheckbox: document.getElementById('faceAnalysis'),
-    shortsLength: document.getElementById('shortsLength'),
-    shortsCount: document.getElementById('shortsCount'),
-    
-    // Storage
-    selectFolderBtn: document.getElementById('selectFolderBtn'),
-    outputFolder: document.getElementById('outputFolder'),
-    autoSave: document.getElementById('autoSave'),
-    fileNaming: document.getElementById('fileNaming'),
-    customName: document.getElementById('customName'),
-    customNameContainer: document.getElementById('customNameContainer'),
-    
-    // Progress & Status
-    progressSection: document.getElementById('progressSection'),
-    progressFill: document.getElementById('progressFill'),
-    statusText: document.getElementById('statusText'),
+// Upload related
+export const uploadContainer = document.getElementById('uploadContainer');
+export const fileInput = document.getElementById('file-input');
+export const fileInfo = document.getElementById('fileInfo');
+export const fileName = document.getElementById('fileName');
+export const fileSize = document.getElementById('fileSize');
 
-    // Results
-    resultsContainer: document.getElementById('resultsContainer'),
-    completedShortsGrid: document.getElementById('completedShortsGrid'),
-    shortsTrack: document.getElementById('shortsTrack'),
-    prevShortBtn: document.getElementById('prevShortBtn'),
-    nextShortBtn: document.getElementById('nextShortBtn'),
-    shortsCounter: document.getElementById('shorts-counter'),
+// Video Preview related
+export const videoPreviewSection = document.getElementById('videoPreviewSection');
+export const originalVideoContainer = document.getElementById('originalVideoContainer');
+export const videoPlaceholder = document.getElementById('videoPlaceholder');
+export const videoPreview = document.getElementById('videoPreview');
 
-    // Chat
-    chatHistory: document.getElementById('chatHistory'),
-    chatInput: document.getElementById('chatInput'),
-    sendChatBtn: document.getElementById('sendChatBtn'),
-    newChatBtn: document.getElementById('newChatBtn'),
+// Video Controls
+export const playBtn = document.getElementById('playBtn');
+export const pauseBtn = document.getElementById('pauseBtn');
+export const rewindBtn = document.getElementById('rewindBtn');
 
-    // Chat List
-    chatList: document.getElementById('chatList'),
-    selectAllChats: document.getElementById('selectAllChats'),
-    saveChatsBtn: document.getElementById('saveChatsBtn'),
-    loadChatsBtn: document.getElementById('loadChatsBtn'),
-    loadChatsInput: document.getElementById('loadChatsInput'),
-    deleteChatsBtn: document.getElementById('deleteChatsBtn'),
+// Options
+export const shortsLength = document.getElementById('shortsLength');
+export const shortsCount = document.getElementById('shortsCount');
 
-    // Face Gallery
-    faceGalleryContainer: document.getElementById('faceGalleryContainer'),
-    analyzeFacesBtn: document.getElementById('analyzeFacesBtn'),
-    generateFaceImagesBtn: document.getElementById('generateFaceImagesBtn'),
-    downloadFaceGalleryBtn: document.getElementById('downloadFaceGalleryBtn'),
-    analysisProgress: document.getElementById('analysisProgress'),
-    faceProgressFill: document.getElementById('faceProgressFill'),
-    faceProgressText: document.getElementById('faceProgressText'),
-    faceResults: document.getElementById('faceResults'),
+// Controls and buttons
+export const processBtn = document.getElementById('processBtn');
+export const platformCards = document.querySelectorAll('.platform-card');
+export const loadNewVideoButton = document.getElementById('loadNewVideoButton');
 
-    // AI Models
-    mainModelSelect: document.getElementById('mainModelSelect'),
-    subModelSelect: document.getElementById('subModelSelect'),
-    apiSettingsBtn: document.getElementById('apiSettingsBtn'),
-    
-    // API Key Modal
-    apiKeyModal: document.getElementById('apiKeyModal'),
-    apiKeyModalTitle: document.getElementById('apiKeyModalTitle'),
-    apiKeyInput: document.getElementById('apiKeyInput'),
-    apiKeyLink: document.getElementById('apiKeyLink'),
-    saveApiKeyBtn: document.getElementById('saveApiKey'),
-    cancelApiKeyBtn: document.getElementById('cancelApiKey'),
-    closeApiKeyModalBtn: document.querySelector('#apiKeyModal .close-button'),
+// Storage management elements
+export const selectFolderBtn = document.getElementById('selectFolderBtn');
+export const outputFolder = document.getElementById('outputFolder');
+export const autoSave = document.getElementById('autoSave');
+export const fileNaming = document.getElementById('fileNaming');
+export const customName = document.getElementById('customName');
+export const customNameContainer = document.getElementById('customNameContainer');
 
-    // Upload Modal
-    uploadModal: document.getElementById('uploadModal'),
-    modalTitle: document.getElementById('modalTitle'),
-    uploadForm: document.getElementById('uploadForm'),
-    videoTitle: document.getElementById('videoTitle'),
-    videoDescription: document.getElementById('videoDescription'),
-    videoTags: document.getElementById('videoTags'),
-    cancelUpload: document.getElementById('cancelUpload'),
-    confirmUpload: document.getElementById('confirmUpload'),
-}; 
+// Results related
+export const resultsContainer = document.getElementById('resultsContainer');
+export const shortsTrack = document.getElementById('shortsTrack');
+export const prevShortBtn = document.getElementById('prevShortBtn');
+export const nextShortBtn = document.getElementById('nextShortBtn');
+export const shortsCounter = document.getElementById('shorts-counter');
+export const completedShortsGrid = document.getElementById('completedShortsGrid'); // Kept for safety
+
+// Chat panel elements
+export const chatHistory = document.getElementById('chatHistory');
+export const chatInput = document.getElementById('chatInput');
+export const sendChatBtn = document.getElementById('sendChatBtn');
+export const newChatBtn = document.getElementById('newChatBtn');
+
+// Chat List elements
+export const chatList = document.getElementById('chatList');
+export const selectAllChats = document.getElementById('selectAllChats');
+export const saveChatsBtn = document.getElementById('saveChatsBtn');
+export const loadChatsBtn = document.getElementById('loadChatsBtn');
+export const loadChatsInput = document.getElementById('loadChatsInput');
+export const deleteChatsBtn = document.getElementById('deleteChatsBtn');
+
+// Face Gallery elements
+export const faceGalleryContainer = document.getElementById('faceGalleryContainer');
+export const faceAnalysisCheckbox = document.getElementById('faceAnalysis');
+export const analyzeFacesBtn = document.getElementById('analyzeFacesBtn');
+export const generateFaceImagesBtn = document.getElementById('generateFaceImagesBtn');
+export const downloadFaceGalleryBtn = document.getElementById('downloadFaceGalleryBtn');
+export const analysisProgress = document.getElementById('analysisProgress');
+export const faceProgressFill = document.getElementById('faceProgressFill');
+export const faceProgressText = document.getElementById('faceProgressText');
+export const faceResults = document.getElementById('faceResults');
+
+// Progress Bar
+export const progressSection = document.getElementById('progressSection');
+export const progressFill = document.getElementById('progressFill');
+export const statusText = document.getElementById('statusText');
+
+// Modals
+export const uploadModal = document.getElementById('uploadModal');
+export const modalTitle = document.getElementById('modalTitle');
+export const uploadForm = document.getElementById('uploadForm');
+export const videoTitle = document.getElementById('videoTitle');
+export const videoDescription = document.getElementById('videoDescription');
+export const videoTags = document.getElementById('videoTags');
+export const cancelUpload = document.getElementById('cancelUpload');
+export const confirmUpload = document.getElementById('confirmUpload');
+
+// API Key Modal
+export const apiKeyModal = document.getElementById('apiKeyModal');
+export const apiKeyModalTitle = document.getElementById('apiKeyModalTitle');
+export const apiKeyInput = document.getElementById('apiKeyInput');
+export const apiKeyLink = document.getElementById('apiKeyLink');
+export const saveApiKeyBtn = document.getElementById('saveApiKey'); // Renamed from saveApiKey
+export const cancelApiKeyBtn = document.getElementById('cancelApiKey'); // Renamed from cancelApiKey
+export const closeApiKeyModalBtn = apiKeyModal.querySelector('.close-button'); // Renamed from closeBtn
+
+// AI Model Selection
+export const mainModelSelect = document.getElementById('mainModelSelect');
+export const subModelSelect = document.getElementById('subModelSelect');
+export const apiSettingsBtn = document.getElementById('apiSettingsBtn'); 

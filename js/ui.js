@@ -1,5 +1,11 @@
 // This file contains UI-related helper functions.
 
+import * as DOM from './dom-elements.js';
+
+let uploadedFile = null;
+let chats = [];
+let currentChatId = null;
+
 // --- DOM Element Selectors ---
 const domElements = {
     themeToggle: document.getElementById('theme-toggle'),
@@ -225,4 +231,137 @@ function updateCarouselUI(currentIndex, total) {
     track.style.transform = `translateX(${offset}px)`;
     
     domElements.shortsCounter.textContent = `${currentIndex + 1} / ${total}`;
+}
+
+// --- Theme Logic ---
+function applyInitialTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.body.classList.toggle('dark-mode', savedTheme === 'dark');
+    domElements.themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+}
+
+function setupThemeEventListeners() {
+    domElements.themeToggle.addEventListener('click', () => {
+        const isDarkMode = document.body.classList.toggle('dark-mode');
+        domElements.themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    });
+}
+
+// --- File Handling Logic ---
+function handleFile(file) {
+    uploadedFile = file;
+    DOM.fileName.textContent = file.name;
+    DOM.fileSize.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+    DOM.fileInfo.style.display = 'block';
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        DOM.videoPreview.src = e.target.result;
+        DOM.videoPlaceholder.style.display = 'none';
+        DOM.videoPreview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+
+    DOM.uploadContainer.style.display = 'none';
+    DOM.videoPreviewSection.style.display = 'block';
+    
+    DOM.playBtn.disabled = false;
+    DOM.pauseBtn.disabled = false;
+    DOM.rewindBtn.disabled = false;
+
+    updateProcessButtonState();
+}
+
+function setupFileHandlingEventListeners() {
+    domElements.fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+    domElements.uploadContainer.addEventListener('click', () => domElements.fileInput.click());
+    domElements.uploadContainer.addEventListener('dragover', (e) => e.preventDefault());
+    domElements.uploadContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+    });
+    domElements.loadNewVideoButton.addEventListener('click', () => domElements.fileInput.click());
+}
+
+// --- State Update & UI Logic ---
+function updateProcessButtonState() {
+    const platformsSelected = Array.from(domElements.platformCards).some(c => c.classList.contains('selected'));
+    domElements.processBtn.disabled = !uploadedFile || !platformsSelected;
+}
+
+function setupPlatformCardEventListeners() {
+    domElements.platformCards.forEach(card => {
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            updateProcessButtonState();
+        });
+    });
+}
+
+// --- Chat Logic (Simplified) ---
+function addMessage(sender, text) {
+    const currentChat = chats.find(chat => chat.id === currentChatId);
+    if(currentChat) {
+        currentChat.messages.push({ sender, text });
+        renderChatHistory();
+    }
+}
+
+function renderChatHistory() {
+    domElements.chatHistory.innerHTML = '';
+    const currentChat = chats.find(chat => chat.id === currentChatId);
+    if (!currentChat) return;
+    currentChat.messages.forEach(msg => {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('chat-message', `${msg.sender}-message`);
+        messageElement.innerHTML = `<div class="avatar">${msg.sender === 'ai' ? '🤖' : '👤'}</div><div class="message-content">${msg.text.replace(/\n/g, '<br>')}</div>`;
+        domElements.chatHistory.appendChild(messageElement);
+    });
+    domElements.chatHistory.scrollTop = domElements.chatHistory.scrollHeight;
+}
+
+function startNewChat() {
+    currentChatId = `chat_${Date.now()}`;
+    chats.push({
+        id: currentChatId,
+        title: `새 대화 ${new Date().toLocaleString()}`,
+        messages: [{ sender: 'ai', text: `안녕하세요! 영상 처리를 도와드릴 AI 어시스턴트입니다.` }]
+    });
+    renderAll();
+}
+
+function renderChatList() {
+    domElements.chatList.innerHTML = '';
+    chats.forEach(chat => {
+        const item = document.createElement('div');
+        item.className = 'chat-list-item' + (chat.id === currentChatId ? ' active' : '');
+        item.innerHTML = `<span>${chat.title}</span>`;
+        item.addEventListener('click', () => { currentChatId = chat.id; renderAll(); });
+        domElements.chatList.appendChild(item);
+    });
+}
+
+function renderAll() {
+    renderChatList();
+    renderChatHistory();
+}
+
+function setupChatEventListeners() {
+    domElements.newChatBtn.addEventListener('click', startNewChat);
+    domElements.processBtn.addEventListener('click', () => {
+        addMessage('ai', '영상 처리 기능은 다음 단계에서 구현될 예정입니다.');
+    });
+}
+
+export function initializeUI() {
+    applyInitialTheme();
+    setupThemeEventListeners();
+    setupFileHandlingEventListeners();
+    setupPlatformCardEventListeners();
+    setupChatEventListeners();
+    updateProcessButtonState();
+    startNewChat();
 } 

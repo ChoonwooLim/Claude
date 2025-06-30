@@ -37,12 +37,13 @@
             </div>
 
             <!-- 원본 영상 미리보기 (업로드 후 표시) -->
-            <div class="video-preview-section" id="videoPreviewSection">
+            <div class="video-preview-section" id="videoPreviewSection" style="display: none;">
                 <h3>📹&nbsp;원본 영상 미리보기</h3>
                 <div class="video-container" id="originalVideoContainer">
-                    <div class="video-placeholder">
+                    <div class="video-placeholder" id="videoPlaceholder">
                         영상을 업로드하면 여기에서 미리볼 수 있습니다
                     </div>
+                    <video id="videoPreview" controls style="display: none; width: 100%;"></video>
                 </div>
                 <div class="video-controls">
                     <button class="control-btn" id="playBtn" disabled>▶️ 재생</button>
@@ -51,118 +52,117 @@
                 </div>
             </div>
             
-            <!-- 처리 옵션 섹션 -->
             <div id="videoEditorContainer" style="display: none;">
-                <video id="videoPreview" controls></video>
+                <!-- This container is now obsolete -->
             </div>
 
-                        <div class="options-section">
-                            <div class="option-group">
-                                <h3>📼 영상 처리</h3>
-                                <div class="checkbox-group">
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="autoHighlight" name="video_processing" value="highlight" checked>
-                                        <label for="autoHighlight">자동 하이라이트 추출</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="autoCrop" name="video_processing" value="crop" checked>
-                                        <label for="autoCrop">자동 크롭</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="colorCorrection" name="video_processing" value="color" checked>
-                                        <label for="colorCorrection">색상 보정</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="videoStabilization" name="video_processing" value="stabilize">
-                                        <label for="videoStabilization">영상 안정화</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="option-group">
-                                <h3>🔊 오디오 처리</h3>
-                                <div class="checkbox-group">
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="removeSilence" name="audio_processing" value="silence" checked>
-                                        <label for="removeSilence">무음 구간 제거</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="enhanceAudio" name="audio_processing" value="enhance" checked>
-                                        <label for="enhanceAudio">오디오 향상</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="noiseReduction" name="audio_processing" value="noise" checked>
-                                        <label for="noiseReduction">노이즈 감소</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="option-group">
-                                <h3>📝&nbsp;추가 기능</h3>
-                                <div class="checkbox-group">
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="addTitle" name="features" value="title">
-                                        <label for="addTitle">타이틀 추가</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="addSubtitles" name="features" value="subtitles">
-                                        <label for="addSubtitles">자막 추가</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="addEffects" name="features" value="effects">
-                                        <label for="addEffects">영상효과 추가</label>
-                                    </div>
-                                    <div class="checkbox-item">
-                                        <input type="checkbox" id="faceAnalysis" name="features" value="face_analysis">
-                                        <label for="faceAnalysis">🎭 배우 얼굴 분석 및 갤러리 생성</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="option-group">
-                                <h3>⚙️&nbsp;숏츠 생성 설정</h3>
-                                <div class="setting-item">
-                                    <label for="shortsLength">영상 길이</label>
-                                    <select id="shortsLength" class="setting-input">
-                                        <option value="15">15초</option>
-                                        <option value="30">30초</option>
-                                        <option value="45">45초</option>
-                                        <option value="60" selected>60초</option>
-                                    </select>
-                                </div>
-                                <div class="setting-item">
-                                    <label for="shortsCount">생성 개수</label>
-                                    <input type="number" id="shortsCount" class="setting-input" value="1" min="1" max="10">
-                                </div>
-                            </div>
-
-                            <div class="option-group">
-                                <h3>📁&nbsp;저장 관리</h3>
-                                <div class="setting-item">
-                                    <label for="outputFolder">저장 폴더</label>
-                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                        <input type="text" id="outputFolder" class="setting-input" placeholder="폴더를 선택하세요" readonly style="flex: 1;">
-                                        <button id="selectFolderBtn" class="control-btn" style="padding: 0.5rem;">📁</button>
-                                    </div>
-                                </div>
-                                <div class="setting-item">
-                                    <label for="autoSave">자동 저장</label>
-                                    <input type="checkbox" id="autoSave" checked>
-                                </div>
-                                <div class="setting-item">
-                                    <label for="fileNaming">파일명 형식</label>
-                                    <select id="fileNaming" class="setting-input">
-                                        <option value="timestamp">타임스탬프 (20241220_143022)</option>
-                                        <option value="sequential">순차번호 (shorts_001, shorts_002)</option>
-                                        <option value="custom">사용자 정의</option>
-                                    </select>
-                                </div>
-                                <div class="setting-item" id="customNameContainer" style="display: none;">
-                                    <label for="customName">사용자 정의명</label>
-                                    <input type="text" id="customName" class="setting-input" placeholder="예: MyShorts">
-                                </div>
-                            </div>
+            <div class="options-section">
+                <div class="option-group">
+                    <h3>📼 영상 처리</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="autoHighlight" name="video_processing" value="highlight" checked>
+                            <label for="autoHighlight">자동 하이라이트 추출</label>
                         </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="autoCrop" name="video_processing" value="crop" checked>
+                            <label for="autoCrop">자동 크롭</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="colorCorrection" name="video_processing" value="color" checked>
+                            <label for="colorCorrection">색상 보정</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="videoStabilization" name="video_processing" value="stabilize">
+                            <label for="videoStabilization">영상 안정화</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>🔊 오디오 처리</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="removeSilence" name="audio_processing" value="silence" checked>
+                            <label for="removeSilence">무음 구간 제거</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="enhanceAudio" name="audio_processing" value="enhance" checked>
+                            <label for="enhanceAudio">오디오 향상</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="noiseReduction" name="audio_processing" value="noise" checked>
+                            <label for="noiseReduction">노이즈 감소</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>📝&nbsp;추가 기능</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addTitle" name="features" value="title">
+                            <label for="addTitle">타이틀 추가</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addSubtitles" name="features" value="subtitles">
+                            <label for="addSubtitles">자막 추가</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="addEffects" name="features" value="effects">
+                            <label for="addEffects">영상효과 추가</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="faceAnalysis" name="features" value="face_analysis">
+                            <label for="faceAnalysis">🎭 배우 얼굴 분석 및 갤러리 생성</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>⚙️&nbsp;숏츠 생성 설정</h3>
+                    <div class="setting-item">
+                        <label for="shortsLength">영상 길이</label>
+                        <select id="shortsLength" class="setting-input">
+                            <option value="15">15초</option>
+                            <option value="30">30초</option>
+                            <option value="45">45초</option>
+                            <option value="60" selected>60초</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="shortsCount">생성 개수</label>
+                        <input type="number" id="shortsCount" class="setting-input" value="1" min="1" max="10">
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <h3>📁&nbsp;저장 관리</h3>
+                    <div class="setting-item">
+                        <label for="outputFolder">저장 폴더</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text" id="outputFolder" class="setting-input" placeholder="폴더를 선택하세요" readonly style="flex: 1;">
+                            <button id="selectFolderBtn" class="control-btn" style="padding: 0.5rem;">📁</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="autoSave">자동 저장</label>
+                        <input type="checkbox" id="autoSave" checked>
+                    </div>
+                    <div class="setting-item">
+                        <label for="fileNaming">파일명 형식</label>
+                        <select id="fileNaming" class="setting-input">
+                            <option value="timestamp">타임스탬프 (20241220_143022)</option>
+                            <option value="sequential">순차번호 (shorts_001, shorts_002)</option>
+                            <option value="custom">사용자 정의</option>
+                        </select>
+                    </div>
+                    <div class="setting-item" id="customNameContainer" style="display: none;">
+                        <label for="customName">사용자 정의명</label>
+                        <input type="text" id="customName" class="setting-input" placeholder="예: MyShorts">
+                    </div>
+                </div>
+            </div>
 
             <div class="chat-area">
                 <div class="chat-list-panel">
@@ -179,8 +179,8 @@
                         <input type="file" id="loadChatsInput" style="display: none;" accept=".json">
                         <button id="deleteChatsBtn" title="선택 대화 삭제">🗑️ 삭제</button>
                     </div>
-                        </div>
-                        
+                </div>
+                
                 <div class="chat-panel">
                     <div class="chat-header">
                         <h3>AI 어시스턴트</h3>
@@ -190,34 +190,34 @@
                         <!-- Chat messages will be appended here -->
                     </div>
                 </div>
-                        </div>
-                        
+            </div>
+            
             <div class="selection-container">
                 <div class="dark-selection-box">
-                            <h3>🌐&nbsp;플랫폼 선택</h3>
-                            <div class="platform-group">
-                                <div class="platform-card" data-platform="youtube_shorts">
-                                    <div class="platform-icon">📺</div>
-                                    YouTube Shorts
-                                </div>
-                                <div class="platform-card" data-platform="instagram_reels">
-                                    <div class="platform-icon">📸</div>
-                                    Instagram Reels
-                                </div>
-                                <div class="platform-card" data-platform="tiktok">
-                                    <div class="platform-icon">🎵</div>
-                                    TikTok
-                                </div>
-                                <div class="platform-card" data-platform="naver">
-                                    <div class="platform-icon">KR</div>
-                                    네이버
-                                </div>
-                                <div class="platform-card" data-platform="facebook_reels">
-                                    <div class="platform-icon">👥</div>
-                                    Facebook Reels
-                                </div>
-                            </div>
+                    <h3>🌐&nbsp;플랫폼 선택</h3>
+                    <div class="platform-group">
+                        <div class="platform-card" data-platform="youtube_shorts">
+                            <div class="platform-icon">📺</div>
+                            YouTube Shorts
                         </div>
+                        <div class="platform-card" data-platform="instagram_reels">
+                            <div class="platform-icon">📸</div>
+                            Instagram Reels
+                        </div>
+                        <div class="platform-card" data-platform="tiktok">
+                            <div class="platform-icon">🎵</div>
+                            TikTok
+                        </div>
+                        <div class="platform-card" data-platform="naver">
+                            <div class="platform-icon">KR</div>
+                            네이버
+                        </div>
+                        <div class="platform-card" data-platform="facebook_reels">
+                            <div class="platform-icon">👥</div>
+                            Facebook Reels
+                        </div>
+                    </div>
+                </div>
 
                 <div class="dark-selection-box ai-model-box">
                     <div class="chat-input-area">
@@ -229,10 +229,10 @@
                         <select id="subModelSelect" class="setting-input"></select>
                         <button class="settings-btn" id="apiSettingsBtn" title="API 키 설정">⚙️</button>
                     </div>
-                    </div>
                 </div>
+            </div>
 
-                <div class="process-section">
+            <div class="process-section">
                 <button id="processBtn" class="process-btn" disabled>🚀&nbsp;영상 처리 시작</button>
             </div>
 
@@ -266,15 +266,15 @@
                 <div class="face-results" id="faceResults">
                     <!-- 분석된 얼굴들이 여기에 표시됩니다 -->
                 </div>
-                </div>
+            </div>
 
             <!-- 진행률 표시 -->
             <div class="progress-section" id="progressSection">
-                        <div class="progress-bar">
+                <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
-                        </div>
+                </div>
                 <div class="status-text" id="statusText">처리 중...</div>
-                    </div>
+            </div>
         </div>
 
         <!-- 오른쪽 패널: 결과 -->
@@ -297,8 +297,8 @@
                     <!-- This is now unused, but kept for safety, will be controlled by JS -->
                 </div>
             </div>
-                    </div>
-                </div>
+        </div>
+    </div>
 
     <!-- 업로드 모달 -->
     <div class="upload-modal" id="uploadModal">
@@ -308,22 +308,22 @@
                 <div class="form-group">
                     <label for="videoTitle">제목</label>
                     <input type="text" id="videoTitle" required>
-            </div>
+                </div>
                 <div class="form-group">
                     <label for="videoDescription">설명</label>
                     <textarea id="videoDescription" placeholder="영상에 대한 설명을 입력하세요..."></textarea>
-                        </div>
+                </div>
                 <div class="form-group">
                     <label for="videoTags">태그 (쉼표로 구분)</label>
                     <input type="text" id="videoTags" placeholder="예: 숏츠, 유튜브, 재미있는">
-                        </div>
+                </div>
             </form>
             <div class="modal-actions">
                 <button class="modal-btn cancel" id="cancelUpload">취소</button>
                 <button class="modal-btn upload" id="confirmUpload">업로드</button>
-                        </div>
-                    </div>
-                        </div>
+            </div>
+        </div>
+    </div>
 
     <!-- API Key Modal -->
     <div id="apiKeyModal" class="api-key-modal">
@@ -334,16 +334,16 @@
                 <div class="form-label-group">
                     <label for="apiKeyInput">API 키</label>
                     <a href="#" id="apiKeyLink" target="_blank" rel="noopener noreferrer">API 키 발급받기 &nearr;</a>
-                                </div>
+                </div>
                 <input type="password" id="apiKeyInput" class="form-group-input">
-                            </div>
+            </div>
             <div class="modal-actions">
                 <button id="cancelApiKey" class="btn btn-secondary">취소</button>
                 <button id="saveApiKey" class="btn btn-primary">저장</button>
-                        </div>
-                    </div>
-                </div>
-               
-    <script src="js/app.js" defer></script>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js" defer></script>
 </body>
 </html>

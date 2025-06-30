@@ -1,0 +1,177 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>숏츠 자동화 프로그램 - UI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-layout">
+        <!-- 왼쪽 패널: 설정 및 컨트롤 -->
+        <div class="left-panel">
+            <div class="header">
+                <img src="image/TwinverseLogo.png" alt="Twinverse Logo" class="header-logo">
+                <div class="title-box">
+                    <h1> 숏츠 자동화 프로그램</h1>
+                </div>
+                <div class="header-actions">
+                    <button id="loadNewVideoButton" class="upload-btn">새 영상 불러오기 </button>
+                    <button id="theme-toggle"></button>
+                </div>
+            </div>
+
+            <div class="upload-section" id="uploadContainer">
+                <div class="upload-icon"></div>
+                <h3>영상 파일을 드래그하거나 클릭하여 업로드</h3>
+                <p>MP4, AVI, MOV 파일 지원</p>
+                <input type="file" id="file-input" class="file-input" accept="video/*">
+                <div class="file-info" id="fileInfo">
+                    <p id="fileName"></p>
+                    <p id="fileSize"></p>
+                </div>
+            </div>
+
+            <div class="video-preview-section" id="videoPreviewSection">
+                <h3>&nbsp;원본 영상 미리보기</h3>
+                <div class="video-container" id="originalVideoContainer">
+                    <div class="video-placeholder">영상을 업로드하면 여기에서 미리볼 수 있습니다</div>
+                </div>
+                <div class="video-controls">
+                    <button class="control-btn" id="playBtn" disabled> 재생</button>
+                    <button class="control-btn" id="pauseBtn" disabled> 일시정지</button>
+                    <button class="control-btn" id="rewindBtn" disabled> 되감기</button>
+                </div>
+            </div>
+            
+            <div class="options-section">
+                <div class="option-group">
+                    <h3> 영상 처리</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item"><input type="checkbox" id="autoHighlight" checked><label for="autoHighlight">자동 하이라이트 추출</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="autoCrop" checked><label for="autoCrop">자동 크롭</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="colorCorrection" checked><label for="colorCorrection">색상 보정</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="videoStabilization"><label for="videoStabilization">영상 안정화</label></div>
+                    </div>
+                </div>
+                <div class="option-group">
+                    <h3> 오디오 처리</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item"><input type="checkbox" id="removeSilence" checked><label for="removeSilence">무음 구간 제거</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="enhanceAudio" checked><label for="enhanceAudio">오디오 향상</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="noiseReduction" checked><label for="noiseReduction">노이즈 감소</label></div>
+                    </div>
+                </div>
+                <div class="option-group">
+                    <h3>&nbsp;추가 기능</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item"><input type="checkbox" id="addTitle"><label for="addTitle">타이틀 추가</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="addSubtitles"><label for="addSubtitles">자막 추가</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="addEffects"><label for="addEffects">영상효과 추가</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="faceAnalysis"><label for="faceAnalysis"> 배우 얼굴 분석</label></div>
+                    </div>
+                </div>
+                <div class="option-group">
+                    <h3>&nbsp;숏츠 생성 설정</h3>
+                    <div class="setting-item"><label for="shortsLength">영상 길이</label><select id="shortsLength" class="setting-input"><option value="60" selected>60초</option></select></div>
+                    <div class="setting-item"><label for="shortsCount">생성 개수</label><input type="number" id="shortsCount" class="setting-input" value="1" min="1" max="10"></div>
+                </div>
+                 <div class="option-group">
+                    <h3>&nbsp;저장 관리</h3>
+                    <div class="setting-item">
+                        <label for="outputFolder">저장 폴더</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="text" id="outputFolder" class="setting-input" placeholder="폴더를 선택하세요" readonly style="flex: 1;">
+                            <button id="selectFolderBtn" class="control-btn" style="padding: 0.5rem;"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-area">
+                <div class="chat-list-panel">
+                    <div class="chat-list-header">
+                        <h3>대화 목록</h3>
+                        <input type="checkbox" id="selectAllChats" title="전체 선택">
+                    </div>
+                    <div class="chat-list" id="chatList"></div>
+                    <div class="chat-list-actions">
+                        <button id="saveChatsBtn" title="모든 대화 저장"></button>
+                        <button id="loadChatsBtn" title="파일에서 불러오기"></button>
+                        <input type="file" id="loadChatsInput" style="display: none;" accept=".json">
+                        <button id="deleteChatsBtn" title="선택 대화 삭제"></button>
+                    </div>
+                </div>
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <h3>AI 어시스턴트</h3>
+                        <div class="ai-model-selector">
+                            <select id="mainModelSelect"></select>
+                            <select id="subModelSelect"></select>
+                            <button id="apiSettingsBtn" title="API Key 설정"></button>
+                        </div>
+                        <button id="newChatBtn">새 대화</button>
+                    </div>
+                    <div class="chat-history" id="chatHistory"></div>
+                    <div class="chat-input-area">
+                        <textarea id="chatInput" placeholder="AI에게 영상 처리 및 편집을 요청하세요..."></textarea>
+                        <button id="sendChatBtn" title="전송"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="selection-container">
+                <div class="dark-selection-box">
+                    <h3>&nbsp;플랫폼 선택</h3>
+                    <div class="platform-group">
+                        <div class="platform-card" data-platform="youtube_shorts">YouTube Shorts</div>
+                        <div class="platform-card" data-platform="instagram_reels">Instagram Reels</div>
+                        <div class="platform-card" data-platform="tiktok">TikTok</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="process-section">
+                <button id="processBtn" class="process-btn" disabled>&nbsp;영상 처리 시작</button>
+            </div>
+
+        </div>
+
+        <!-- 오른쪽 패널: 결과 -->
+        <div class="right-panel">
+            <div id="resultsContainer">
+                <h3> 완성된 숏츠 영상</h3>
+                <div class="shorts-carousel">
+                    <button class="carousel-btn prev" id="prevShortBtn"></button>
+                    <div class="shorts-viewport">
+                        <div id="shortsTrack"></div>
+                    </div>
+                    <button class="carousel-btn next" id="nextShortBtn"></button>
+                </div>
+                <div id="shorts-counter"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="apiKeyModalTitle">API Key 설정</h2>
+                <span class="close-button" id="closeApiKeyModal">&times;</span>
+            </div>
+            <p>선택한 AI 모델의 API 키를 입력하세요. 키는 로컬 브라우저에만 저장됩니다.</p>
+            <input type="password" id="apiKeyInput" placeholder="API 키를 여기에 붙여넣으세요">
+            <a id="apiKeyLink" href="#" target="_blank">API 키 발급받기</a>
+            <div class="modal-actions">
+                <button id="saveApiKey" class="control-btn">저장</button>
+                <button id="cancelApiKey" class="control-btn secondary">취소</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/main.js" type="module"></script>
+</body>
+</html>
