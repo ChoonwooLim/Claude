@@ -269,6 +269,8 @@ function handleFile(file) {
     DOM.playBtn.disabled = false;
     DOM.pauseBtn.disabled = false;
     DOM.rewindBtn.disabled = false;
+    DOM.fastForwardBtn.disabled = false;
+    DOM.playbackSpeedSelect.disabled = false;
 
     updateProcessButtonState();
 }
@@ -284,6 +286,28 @@ function setupFileHandlingEventListeners() {
         if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
     });
     domElements.loadNewVideoButton.addEventListener('click', () => domElements.fileInput.click());
+}
+
+function setupVideoControlEvents() {
+    DOM.playBtn.addEventListener('click', () => {
+        DOM.videoPreview.play();
+    });
+
+    DOM.pauseBtn.addEventListener('click', () => {
+        DOM.videoPreview.pause();
+    });
+
+    DOM.rewindBtn.addEventListener('click', () => {
+        DOM.videoPreview.currentTime -= 10; // 10초 되감기
+    });
+
+    DOM.fastForwardBtn.addEventListener('click', () => {
+        DOM.videoPreview.currentTime += 10; // 10초 빨리감기
+    });
+
+    DOM.playbackSpeedSelect.addEventListener('change', (e) => {
+        DOM.videoPreview.playbackRate = parseFloat(e.target.value);
+    });
 }
 
 // --- State Update & UI Logic ---
@@ -360,6 +384,7 @@ export function initializeUI() {
     applyInitialTheme();
     setupThemeEventListeners();
     setupFileHandlingEventListeners();
+    setupVideoControlEvents();
     setupPlatformCardEventListeners();
     setupChatEventListeners();
     updateProcessButtonState();

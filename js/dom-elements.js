@@ -17,6 +17,8 @@ export const videoPreview = document.getElementById('videoPreview');
 export const playBtn = document.getElementById('playBtn');
 export const pauseBtn = document.getElementById('pauseBtn');
 export const rewindBtn = document.getElementById('rewindBtn');
+export const fastForwardBtn = document.getElementById('fastForwardBtn');
+export const playbackSpeedSelect = document.getElementById('playbackSpeedSelect');
 
 // Options
 export const shortsLength = document.getElementById('shortsLength');
