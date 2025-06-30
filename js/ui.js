@@ -1,99 +1,44 @@
 // This file contains UI-related helper functions.
 
 import * as DOM from './dom-elements.js';
-import { callAI } from './api.js';
+import { aiModels, saveApiKey, callAI as callAIApi } from './api.js';
+import { loadModels, analyzeFaces } from './face-analysis.js';
 
 let uploadedFile = null;
 let chats = [];
 let currentChatId = null;
-
-// --- DOM Element Selectors ---
-const domElements = {
-    themeToggle: document.getElementById('theme-toggle'),
-    uploadContainer: document.getElementById('uploadContainer'),
-    fileInput: document.getElementById('file-input'),
-    fileInfo: document.getElementById('fileInfo'),
-    fileName: document.getElementById('fileName'),
-    fileSize: document.getElementById('fileSize'),
-    videoPreviewSection: document.getElementById('videoPreviewSection'),
-    originalVideoContainer: document.getElementById('originalVideoContainer'),
-    originalVideoPlaceholder: document.querySelector('#originalVideoContainer .video-placeholder'),
-    playBtn: document.getElementById('playBtn'),
-    pauseBtn: document.getElementById('pauseBtn'),
-    rewindBtn: document.getElementById('rewindBtn'),
-    processBtn: document.getElementById('processBtn'),
-    platformCards: document.querySelectorAll('.platform-card'),
-    loadNewVideoButton: document.getElementById('loadNewVideoButton'),
-    selectFolderBtn: document.getElementById('selectFolderBtn'),
-    outputFolder: document.getElementById('outputFolder'),
-    autoSave: document.getElementById('autoSave'),
-    fileNaming: document.getElementById('fileNaming'),
-    customName: document.getElementById('customName'),
-    customNameContainer: document.getElementById('customNameContainer'),
-    resultsContainer: document.getElementById('resultsContainer'),
-    shortsTrack: document.getElementById('shortsTrack'),
-    prevShortBtn: document.getElementById('prevShortBtn'),
-    nextShortBtn: document.getElementById('nextShortBtn'),
-    shortsCounter: document.getElementById('shorts-counter'),
-    chatHistory: document.getElementById('chatHistory'),
-    chatInput: document.getElementById('chatInput'),
-    sendChatBtn: document.getElementById('sendChatBtn'),
-    newChatBtn: document.getElementById('newChatBtn'),
-    chatList: document.getElementById('chatList'),
-    selectAllChats: document.getElementById('selectAllChats'),
-    saveChatsBtn: document.getElementById('saveChatsBtn'),
-    loadChatsBtn: document.getElementById('loadChatsBtn'),
-    loadChatsInput: document.getElementById('loadChatsInput'),
-    deleteChatsBtn: document.getElementById('deleteChatsBtn'),
-    faceAnalysisCheckbox: document.getElementById('faceAnalysis'),
-    faceGalleryContainer: document.getElementById('faceGalleryContainer'),
-    analyzeFacesBtn: document.getElementById('analyzeFacesBtn'),
-    analysisProgress: document.getElementById('analysisProgress'),
-    faceProgressFill: document.getElementById('faceProgressFill'),
-    faceProgressText: document.getElementById('faceProgressText'),
-    faceResults: document.getElementById('faceResults'),
-    mainModelSelect: document.getElementById('mainModelSelect'),
-    subModelSelect: document.getElementById('subModelSelect'),
-    apiSettingsBtn: document.getElementById('apiSettingsBtn'),
-    apiKeyModal: document.getElementById('apiKeyModal'),
-    apiKeyModalTitle: document.getElementById('apiKeyModalTitle'),
-    apiKeyInput: document.getElementById('apiKeyInput'),
-    apiKeyLink: document.getElementById('apiKeyLink'),
-    saveApiKeyBtn: document.getElementById('saveApiKey'),
-    cancelApiKeyBtn: document.getElementById('cancelApiKey'),
-    closeApiKeyModalBtn: document.querySelector('#apiKeyModal .close-button')
-};
+let currentEditingModel = null;
 
 // --- UI Helper Functions ---
 
 function updateTheme(isDarkMode) {
     document.body.classList.toggle('dark-mode', isDarkMode);
-    domElements.themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+    DOM.themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
 }
 
 function showUploadedFile(file) {
-    domElements.fileName.textContent = `파일명: ${file.name}`;
-    domElements.fileSize.textContent = `파일 크기: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
-    domElements.fileInfo.style.display = 'block';
-    domElements.uploadContainer.style.display = 'none';
-    domElements.videoPreviewSection.style.display = 'block';
+    DOM.fileName.textContent = `파일명: ${file.name}`;
+    DOM.fileSize.textContent = `파일 크기: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+    DOM.fileInfo.style.display = 'block';
+    DOM.uploadContainer.style.display = 'none';
+    DOM.videoPreviewSection.style.display = 'block';
 }
 
 function createVideoPlayer(file) {
     const videoPlayer = document.createElement('video');
     videoPlayer.src = URL.createObjectURL(file);
     videoPlayer.controls = false;
-    domElements.originalVideoContainer.innerHTML = '';
-    domElements.originalVideoContainer.appendChild(videoPlayer);
+    DOM.originalVideoContainer.innerHTML = '';
+    DOM.originalVideoContainer.appendChild(videoPlayer);
     return videoPlayer;
 }
 
 function updateVideoControls(enabled) {
-    domElements.playBtn.disabled = !enabled;
-    domElements.pauseBtn.disabled = !enabled;
-    domElements.rewindBtn.disabled = !enabled;
-    domElements.processBtn.disabled = !enabled;
-    domElements.sendChatBtn.disabled = !enabled;
+    DOM.playBtn.disabled = !enabled;
+    DOM.pauseBtn.disabled = !enabled;
+    DOM.rewindBtn.disabled = !enabled;
+    DOM.processBtn.disabled = !enabled;
+    DOM.sendChatBtn.disabled = !enabled;
 }
 
 function addMessageToHistory(role, content, isThinking = false) {
@@ -118,20 +63,20 @@ function addMessageToHistory(role, content, isThinking = false) {
     `;
 
     if (isThinking) {
-        domElements.chatHistory.appendChild(messageEl);
+        DOM.chatHistory.appendChild(messageEl);
     } else {
-        const thinkingMessage = domElements.chatHistory.querySelector('.thinking');
+        const thinkingMessage = DOM.chatHistory.querySelector('.thinking');
         if (thinkingMessage) {
             thinkingMessage.parentElement.parentElement.replaceWith(messageEl);
         } else {
-            domElements.chatHistory.appendChild(messageEl);
+            DOM.chatHistory.appendChild(messageEl);
         }
     }
-    domElements.chatHistory.scrollTop = domElements.chatHistory.scrollHeight;
+    DOM.chatHistory.scrollTop = DOM.chatHistory.scrollHeight;
 }
 
 function renderChatListUI(chats, currentChatId) {
-    domElements.chatList.innerHTML = '';
+    DOM.chatList.innerHTML = '';
     chats.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     chats.forEach(chat => {
         const item = document.createElement('div');
@@ -144,12 +89,12 @@ function renderChatListUI(chats, currentChatId) {
         if (chat.id === currentChatId) {
             item.classList.add('active');
         }
-        domElements.chatList.appendChild(item);
+        DOM.chatList.appendChild(item);
     });
 }
 
 function renderActiveChatUI(chat) {
-    domElements.chatHistory.innerHTML = '';
+    DOM.chatHistory.innerHTML = '';
     if (chat) {
         chat.messages.forEach(msg => {
             addMessageToHistory(msg.role, msg.content, msg.isThinking);
@@ -161,36 +106,36 @@ function renderActiveChatUI(chat) {
 }
 
 function openApiKeyModalUI(modelData) {
-    domElements.apiKeyModalTitle.textContent = `${modelData.name} API 키 설정`;
-    domElements.apiKeyInput.value = modelData.apiKey || '';
-    domElements.apiKeyLink.href = modelData.apiKeyUrl;
-    domElements.apiKeyModal.style.display = 'block';
+    DOM.apiKeyModalTitle.textContent = `${modelData.name} API 키 설정`;
+    DOM.apiKeyInput.value = modelData.apiKey || '';
+    DOM.apiKeyLink.href = modelData.apiKeyUrl;
+    DOM.apiKeyModal.style.display = 'block';
 }
 
 function closeApiKeyModalUI() {
-    domElements.apiKeyModal.style.display = 'none';
+    DOM.apiKeyModal.style.display = 'none';
 }
 
 function updateFolderStatusUI(isSelected, folderName = '') {
     if (isSelected && folderName) {
-        domElements.outputFolder.className = 'setting-input folder-selected';
-        domElements.selectFolderBtn.className = 'control-btn folder-selected';
-        domElements.selectFolderBtn.innerHTML = '✅';
-        domElements.selectFolderBtn.title = `현재 폴더: ${folderName}`;
-        domElements.outputFolder.placeholder = `현재 선택: ${folderName}`;
+        DOM.outputFolder.className = 'setting-input folder-selected';
+        DOM.selectFolderBtn.className = 'control-btn folder-selected';
+        DOM.selectFolderBtn.innerHTML = '✅';
+        DOM.selectFolderBtn.title = `현재 폴더: ${folderName}`;
+        DOM.outputFolder.placeholder = `현재 선택: ${folderName}`;
     } else {
-        domElements.outputFolder.className = 'setting-input folder-not-selected';
-        domElements.selectFolderBtn.className = 'control-btn folder-not-selected';
-        domElements.selectFolderBtn.innerHTML = '📁';
-        domElements.selectFolderBtn.title = '저장 폴더를 선택하세요 (필수)';
-        domElements.outputFolder.placeholder = '📁 저장 폴더를 먼저 선택해주세요';
+        DOM.outputFolder.className = 'setting-input folder-not-selected';
+        DOM.selectFolderBtn.className = 'control-btn folder-not-selected';
+        DOM.selectFolderBtn.innerHTML = '📁';
+        DOM.selectFolderBtn.title = '저장 폴더를 선택하세요 (필수)';
+        DOM.outputFolder.placeholder = '📁 저장 폴더를 먼저 선택해주세요';
     }
 }
 
 function addShortToCarouselUI(videoSrc, index) {
     const shortItem = document.createElement('div');
     shortItem.className = 'short-item';
-    shortItem.style.flex = `0 0 ${domElements.shortsTrack.parentElement.offsetWidth}px`;
+    shortItem.style.flex = `0 0 ${DOM.shortsTrack.parentElement.offsetWidth}px`;
     shortItem.dataset.index = index;
 
     shortItem.innerHTML = `
@@ -211,42 +156,34 @@ function addShortToCarouselUI(videoSrc, index) {
         </div>
     `;
     
-    domElements.shortsTrack.appendChild(shortItem);
+    DOM.shortsTrack.appendChild(shortItem);
     updateCarouselUI();
 }
 
 function updateCarouselUI(currentIndex, total) {
-    const track = domElements.shortsTrack;
+    const track = DOM.shortsTrack;
     const viewportWidth = track.parentElement.offsetWidth;
     
     if (total === 0) {
-        domElements.resultsContainer.style.display = 'none';
+        DOM.resultsContainer.style.display = 'none';
         return;
     }
 
-    domElements.resultsContainer.style.display = 'block';
-    domElements.prevShortBtn.style.display = currentIndex > 0 ? 'block' : 'none';
-    domElements.nextShortBtn.style.display = currentIndex < total - 1 ? 'block' : 'none';
+    DOM.resultsContainer.style.display = 'block';
+    DOM.prevShortBtn.style.display = currentIndex > 0 ? 'block' : 'none';
+    DOM.nextShortBtn.style.display = currentIndex < total - 1 ? 'block' : 'none';
     
     const offset = -currentIndex * viewportWidth;
     track.style.transform = `translateX(${offset}px)`;
     
-    domElements.shortsCounter.textContent = `${currentIndex + 1} / ${total}`;
+    DOM.shortsCounter.textContent = `${currentIndex + 1} / ${total}`;
 }
 
 // --- Theme Logic ---
 function applyInitialTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.body.classList.toggle('dark-mode', savedTheme === 'dark');
-    domElements.themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-}
-
-function setupThemeEventListeners() {
-    domElements.themeToggle.addEventListener('click', () => {
-        const isDarkMode = document.body.classList.toggle('dark-mode');
-        domElements.themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
-        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-    });
+    DOM.themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 }
 
 // --- File Handling Logic ---
@@ -276,58 +213,14 @@ function handleFile(file) {
     updateProcessButtonState();
 }
 
-function setupFileHandlingEventListeners() {
-    domElements.fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) handleFile(e.target.files[0]);
-    });
-    domElements.uploadContainer.addEventListener('click', () => domElements.fileInput.click());
-    domElements.uploadContainer.addEventListener('dragover', (e) => e.preventDefault());
-    domElements.uploadContainer.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
-    });
-    domElements.loadNewVideoButton.addEventListener('click', () => domElements.fileInput.click());
-}
-
 function updateSendButtonState() {
     DOM.sendChatBtn.disabled = DOM.chatInput.value.trim() === '';
 }
 
-function setupVideoControlEvents() {
-    DOM.playBtn.addEventListener('click', () => {
-        DOM.videoPreview.play();
-    });
-
-    DOM.pauseBtn.addEventListener('click', () => {
-        DOM.videoPreview.pause();
-    });
-
-    DOM.rewindBtn.addEventListener('click', () => {
-        DOM.videoPreview.currentTime -= 10; // 10초 되감기
-    });
-
-    DOM.fastForwardBtn.addEventListener('click', () => {
-        DOM.videoPreview.currentTime += 10; // 10초 빨리감기
-    });
-
-    DOM.playbackSpeedSelect.addEventListener('change', (e) => {
-        DOM.videoPreview.playbackRate = parseFloat(e.target.value);
-    });
-}
-
 // --- State Update & UI Logic ---
 function updateProcessButtonState() {
-    const platformsSelected = Array.from(domElements.platformCards).some(c => c.classList.contains('selected'));
-    domElements.processBtn.disabled = !uploadedFile || !platformsSelected;
-}
-
-function setupPlatformCardEventListeners() {
-    domElements.platformCards.forEach(card => {
-        card.addEventListener('click', () => {
-            card.classList.toggle('selected');
-            updateProcessButtonState();
-        });
-    });
+    const platformsSelected = Array.from(DOM.platformCards).some(c => c.classList.contains('selected'));
+    DOM.processBtn.disabled = !uploadedFile || !platformsSelected;
 }
 
 // --- Chat Logic (Simplified) ---
@@ -340,16 +233,16 @@ function addMessage(sender, text) {
 }
 
 function renderChatHistory() {
-    domElements.chatHistory.innerHTML = '';
+    DOM.chatHistory.innerHTML = '';
     const currentChat = chats.find(chat => chat.id === currentChatId);
     if (!currentChat) return;
     currentChat.messages.forEach(msg => {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', `${msg.sender}-message`);
         messageElement.innerHTML = `<div class="avatar">${msg.sender === 'ai' ? '🤖' : '👤'}</div><div class="message-content">${msg.text.replace(/\n/g, '<br>')}</div>`;
-        domElements.chatHistory.appendChild(messageElement);
+        DOM.chatHistory.appendChild(messageElement);
     });
-    domElements.chatHistory.scrollTop = domElements.chatHistory.scrollHeight;
+    DOM.chatHistory.scrollTop = DOM.chatHistory.scrollHeight;
 }
 
 function startNewChat() {
@@ -363,13 +256,13 @@ function startNewChat() {
 }
 
 function renderChatList() {
-    domElements.chatList.innerHTML = '';
+    DOM.chatList.innerHTML = '';
     chats.forEach(chat => {
         const item = document.createElement('div');
         item.className = 'chat-list-item' + (chat.id === currentChatId ? ' active' : '');
         item.innerHTML = `<span>${chat.title}</span>`;
         item.addEventListener('click', () => { currentChatId = chat.id; renderAll(); });
-        domElements.chatList.appendChild(item);
+        DOM.chatList.appendChild(item);
     });
 }
 
@@ -382,56 +275,167 @@ async function handleSendMessage() {
     const text = DOM.chatInput.value.trim();
     if (!text) return;
 
-    addMessage('user', text);
+    const modelKey = DOM.mainModelSelect.value;
+    const subModel = DOM.subModelSelect.value;
+    addMessageToHistory('user', text);
     DOM.chatInput.value = '';
     updateSendButtonState();
     DOM.chatInput.disabled = true;
-    addMessage('ai', '🤖 AI가 생각 중입니다...');
+    addMessageToHistory('ai', '', true); // Show thinking indicator
 
     try {
         const systemPrompt = "You are a helpful assistant for video editing.";
-        const aiResponse = await callAI(systemPrompt, text);
-        
-        // "생각 중입니다" 메시지 제거
-        const currentChat = chats.find(chat => chat.id === currentChatId);
-        if (currentChat) {
-            currentChat.messages.pop();
-        }
-        
-        addMessage('ai', aiResponse);
+        const aiResponse = await callAIApi(modelKey, subModel, systemPrompt, text);
+        addMessageToHistory('ai', aiResponse);
 
     } catch (error) {
-        addMessage('ai', `오류가 발생했습니다: ${error.message}`);
+        addMessageToHistory('ai', `오류가 발생했습니다: ${error.message}`);
     } finally {
         DOM.chatInput.disabled = false;
         DOM.chatInput.focus();
+        updateSendButtonState();
     }
 }
 
-function setupChatEventListeners() {
-    domElements.newChatBtn.addEventListener('click', startNewChat);
+function initializeModelSelects() {
+    DOM.mainModelSelect.innerHTML = '';
+    for (const key in aiModels) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = aiModels[key].name;
+        DOM.mainModelSelect.appendChild(option);
+    }
+    updateSubModels();
+}
 
-    domElements.sendChatBtn.addEventListener('click', handleSendMessage);
-    domElements.chatInput.addEventListener('keydown', (e) => {
+function updateSubModels() {
+    const selectedModelKey = DOM.mainModelSelect.value;
+    DOM.subModelSelect.innerHTML = '';
+    if (aiModels[selectedModelKey] && aiModels[selectedModelKey].subModels) {
+        aiModels[selectedModelKey].subModels.forEach(modelName => {
+            const option = document.createElement('option');
+            option.value = modelName;
+            option.textContent = modelName;
+            DOM.subModelSelect.appendChild(option);
+        });
+    }
+}
+
+function openApiKeyModal() {
+    const selectedModelKey = DOM.mainModelSelect.value;
+    currentEditingModel = selectedModelKey;
+    const modelData = aiModels[selectedModelKey];
+    
+    DOM.apiKeyModalTitle.textContent = `${modelData.name} API 키 설정`;
+    DOM.apiKeyInput.value = modelData.apiKey || '';
+    DOM.apiKeyLink.href = modelData.apiKeyUrl;
+    DOM.apiKeyModal.style.display = 'block';
+}
+
+function closeApiKeyModal() {
+    DOM.apiKeyModal.style.display = 'none';
+}
+
+function setupEventListeners() {
+    // Theme
+    DOM.themeToggle.addEventListener('click', () => {
+        const isDarkMode = document.body.classList.toggle('dark-mode');
+        DOM.themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    });
+
+    // File Handling
+    DOM.fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+    DOM.uploadContainer.addEventListener('click', () => DOM.fileInput.click());
+    DOM.uploadContainer.addEventListener('dragover', (e) => e.preventDefault());
+    DOM.uploadContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+    });
+    DOM.loadNewVideoButton.addEventListener('click', () => DOM.fileInput.click());
+
+    // Video Controls
+    DOM.playBtn.addEventListener('click', () => DOM.videoPreview.play());
+    DOM.pauseBtn.addEventListener('click', () => DOM.videoPreview.pause());
+    DOM.rewindBtn.addEventListener('click', () => DOM.videoPreview.currentTime -= 10);
+    DOM.fastForwardBtn.addEventListener('click', () => DOM.videoPreview.currentTime += 10);
+    DOM.playbackSpeedSelect.addEventListener('change', (e) => {
+        DOM.videoPreview.playbackRate = parseFloat(e.target.value);
+    });
+
+    // Platform Cards
+    DOM.platformCards.forEach(card => {
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            updateProcessButtonState();
+        });
+    });
+
+    // Chat
+    DOM.newChatBtn.addEventListener('click', startNewChat);
+    DOM.sendChatBtn.addEventListener('click', handleSendMessage);
+    DOM.chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
         }
     });
-    domElements.chatInput.addEventListener('input', updateSendButtonState);
+    DOM.chatInput.addEventListener('input', updateSendButtonState);
 
-    domElements.processBtn.addEventListener('click', () => {
+    // Other Buttons
+    DOM.processBtn.addEventListener('click', () => {
         addMessage('ai', '영상 처리 기능은 다음 단계에서 구현될 예정입니다.');
+    });
+
+    DOM.faceAnalysisCheckbox.addEventListener('change', () => {
+        DOM.faceGalleryContainer.style.display = DOM.faceAnalysisCheckbox.checked ? 'block' : 'none';
+    });
+
+    // API Modal & Model Selection
+    DOM.mainModelSelect.addEventListener('change', updateSubModels);
+    DOM.apiSettingsBtn.addEventListener('click', openApiKeyModal);
+    DOM.saveApiKeyBtn.addEventListener('click', () => {
+        if (currentEditingModel) {
+            saveApiKey(currentEditingModel, DOM.apiKeyInput.value);
+            alert(`${aiModels[currentEditingModel].name} API 키가 저장되었습니다.`);
+            closeApiKeyModal();
+        }
+    });
+    DOM.cancelApiKeyBtn.addEventListener('click', closeApiKeyModal);
+    DOM.closeApiKeyModalBtn.addEventListener('click', closeApiKeyModal);
+
+    // Face Analysis Button
+    DOM.analyzeFacesBtn.addEventListener('click', async () => {
+        if (!uploadedFile) {
+            alert("먼저 영상 파일을 업로드해주세요.");
+            return;
+        }
+        console.log("얼굴 분석 버튼 클릭됨");
+        DOM.analyzeFacesBtn.disabled = true;
+        DOM.analyzeFacesBtn.textContent = "분석 중...";
+        
+        const videoElement = DOM.videoPreview;
+        // Ensure video is ready
+        if (videoElement.readyState < 2) {
+             videoElement.addEventListener('loadeddata', async () => {
+                await analyzeFaces(videoElement);
+             }, { once: true });
+        } else {
+             await analyzeFaces(videoElement);
+        }
+
+        DOM.analyzeFacesBtn.disabled = false;
+        DOM.analyzeFacesBtn.textContent = "얼굴 분석 시작";
     });
 }
 
 export function initializeUI() {
     applyInitialTheme();
-    setupThemeEventListeners();
-    setupFileHandlingEventListeners();
-    setupVideoControlEvents();
-    setupPlatformCardEventListeners();
-    setupChatEventListeners();
+    initializeModelSelects();
+    loadModels(); // Load face-api models at startup
+    setupEventListeners();
     updateProcessButtonState();
     startNewChat();
-} 
+}

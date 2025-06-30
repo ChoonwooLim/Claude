@@ -90,9 +90,9 @@ export const apiKeyModal = document.getElementById('apiKeyModal');
 export const apiKeyModalTitle = document.getElementById('apiKeyModalTitle');
 export const apiKeyInput = document.getElementById('apiKeyInput');
 export const apiKeyLink = document.getElementById('apiKeyLink');
-export const saveApiKeyBtn = document.getElementById('saveApiKey'); // Renamed from saveApiKey
-export const cancelApiKeyBtn = document.getElementById('cancelApiKey'); // Renamed from cancelApiKey
-export const closeApiKeyModalBtn = apiKeyModal.querySelector('.close-button'); // Renamed from closeBtn
+export const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+export const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
+export const closeApiKeyModalBtn = document.getElementById('closeApiKeyModalBtn');
 
 // AI Model Selection
 export const mainModelSelect = document.getElementById('mainModelSelect');

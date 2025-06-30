@@ -1,6 +1,4 @@
-import * as DOM from './dom-elements.js';
-
-const aiModels = {
+export const aiModels = {
     claude: { 
         name: "Claude", 
         subModels: ["Claude 3.5 Sonnet", "Claude 3 Opus", "Claude 3 Haiku"], 
@@ -31,33 +29,6 @@ const aiModels = {
     },
 };
 
-let currentEditingModel = null;
-
-function initializeMainModels() {
-    DOM.mainModelSelect.innerHTML = '';
-    for (const key in aiModels) {
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = aiModels[key].name;
-        DOM.mainModelSelect.appendChild(option);
-    }
-}
-
-function updateSubModels() {
-    const selectedModelKey = DOM.mainModelSelect.value;
-    DOM.subModelSelect.innerHTML = '';
-    aiModels[selectedModelKey].subModels.forEach(modelName => {
-        const option = document.createElement('option');
-        option.value = modelName;
-        option.textContent = modelName;
-        DOM.subModelSelect.appendChild(option);
-    });
-}
-
-function closeApiKeyModal() {
-    DOM.apiKeyModal.style.display = 'none';
-}
-
 function loadSavedApiKeys() {
     for (const modelKey in aiModels) {
         const savedKey = localStorage.getItem(`apiKey_${modelKey}`);
@@ -65,29 +36,11 @@ function loadSavedApiKeys() {
     }
 }
 
-function setupApiModalEventListeners() {
-    DOM.mainModelSelect.addEventListener('change', updateSubModels);
-    
-    DOM.apiSettingsBtn.addEventListener('click', () => {
-        const selectedModelKey = DOM.mainModelSelect.value;
-        currentEditingModel = selectedModelKey;
-        DOM.apiKeyModalTitle.textContent = `${aiModels[selectedModelKey].name} API 키 설정`;
-        DOM.apiKeyInput.value = aiModels[selectedModelKey].apiKey || '';
-        DOM.apiKeyLink.href = aiModels[selectedModelKey].apiKeyUrl;
-        DOM.apiKeyModal.style.display = 'block';
-    });
-
-    DOM.saveApiKeyBtn.addEventListener('click', () => {
-        if (currentEditingModel) {
-            aiModels[currentEditingModel].apiKey = DOM.apiKeyInput.value;
-            localStorage.setItem(`apiKey_${currentEditingModel}`, DOM.apiKeyInput.value);
-            alert(`${aiModels[currentEditingModel].name} API 키가 저장되었습니다.`);
-            closeApiKeyModal();
-        }
-    });
-
-    DOM.cancelApiKeyBtn.addEventListener('click', closeApiKeyModal);
-    DOM.closeApiKeyModalBtn.addEventListener('click', closeApiKeyModal);
+export function saveApiKey(modelKey, apiKey) {
+    if (aiModels[modelKey]) {
+        aiModels[modelKey].apiKey = apiKey;
+        localStorage.setItem(`apiKey_${modelKey}`, apiKey);
+    }
 }
 
 // --- API Call Functions ---
@@ -192,9 +145,7 @@ async function callGeminiAPI(message, systemPrompt, modelData, subModel) {
 }
 
 
-export async function callAI(systemPrompt, userMessage) {
-    const modelKey = DOM.mainModelSelect.value;
-    const subModel = DOM.subModelSelect.value;
+export async function callAI(modelKey, subModel, systemPrompt, userMessage) {
     const modelData = aiModels[modelKey];
 
     try {
@@ -219,7 +170,4 @@ export async function callAI(systemPrompt, userMessage) {
 
 export function initializeApiManagement() {
     loadSavedApiKeys();
-    initializeMainModels();
-    updateSubModels();
-    setupApiModalEventListeners();
 }
