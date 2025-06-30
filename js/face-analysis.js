@@ -21,54 +21,34 @@ export async function loadModels() {
     }
 }
 
-async function waitForSeek(videoElement) {
-    return new Promise(resolve => {
-        videoElement.addEventListener('seeked', () => resolve(), { once: true });
-    });
+function updateProgressBar(progress, text) {
+    DOM.faceProgressFill.style.width = `${progress * 100}%`;
+    DOM.faceProgressText.textContent = text || `${Math.round(progress * 100)}%`;
 }
 
-function displayGroupedFaceResults(faceGroups) {
-    DOM.faceResults.innerHTML = '';
+function displayActorResults(actors) {
+    const actorList = DOM.faceResults;
+    actorList.innerHTML = '';
 
-    const title = document.createElement('h3');
-    title.innerHTML = `✅ <span style="color: var(--accent-color);">${faceGroups.length}</span>명의 실제 배우 얼굴을 정밀 분석했습니다!`;
-    title.style.textAlign = 'center';
-    title.style.marginBottom = '2rem';
-    DOM.faceResults.appendChild(title);
+    if (actors.length === 0) {
+        actorList.innerHTML = '<p style="text-align: center;">분석된 배우 정보가 없습니다.</p>';
+        return;
+    }
 
-    const grid = document.createElement('div');
-    grid.className = 'face-card-grid';
-
-    faceGroups.forEach((group, index) => {
-        // Find the best detection in the group (e.g., largest, highest confidence)
-        const representativeFace = group.sort((a, b) => (b.detection.box.width * b.detection.box.height) - (a.detection.box.width * a.detection.box.height))[0];
-        const { detection, expressions, age, gender, image } = representativeFace;
-
+    actors.forEach(actor => {
         const card = document.createElement('div');
         card.className = 'face-card';
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.onload = () => {
-            const { x, y, width, height } = detection.box;
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
-            card.querySelector('.face-image-container').style.backgroundImage = `url(${canvas.toDataURL()})`;
-        };
-        img.src = image;
-
-        const mainExpression = Object.entries(expressions).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-
         card.innerHTML = `
-            <div class="face-image-container"></div>
+            <div class="face-image-container" style="background-image: url('${actor.representativeImg}')"></div>
             <div class="face-info">
-                <h4>배우 ${index + 1}</h4>
-                <p><strong>신뢰도:</strong> ${Math.round(detection.score * 100)}%</p>
-                <p><strong>나이:</strong> 약 ${Math.round(age)}세</p>
-                <p><strong>성별:</strong> ${gender === 'male' ? '남성' : '여성'}</p>
-                <p><strong>주요 표정:</strong> ${mainExpression}</p>
+                <h4>${actor.label}</h4>
+                <p><strong>신뢰도:</strong> ${actor.confidence}%</p>
+                <p><strong>등장 횟수:</strong> ${actor.appearances}회</p>
+                <p><strong>첫 등장:</strong> ${actor.firstAppearance}</p>
+                <p><strong>역할:</strong> ${actor.role}</p>
+                <p><strong>나이:</strong> 약 ${actor.age}세</p>
+                <p><strong>성별:</strong> ${actor.gender}</p>
+                <p><strong>주요 표정:</strong> ${actor.mainExpression}</p>
             </div>
             <div class="face-actions">
                 <button class="btn-edit">수정</button>
@@ -76,86 +56,138 @@ function displayGroupedFaceResults(faceGroups) {
                 <button class="btn-delete">삭제</button>
             </div>
         `;
-        grid.appendChild(card);
+        actorList.appendChild(card);
     });
+}
 
-    DOM.faceResults.appendChild(grid);
+function generateActorInfo(groups) {
+    return groups.map((group, index) => {
+        const bestDetection = group.detections.sort((a, b) => b.detection.box.area - a.detection.box.area)[0];
+        const appearances = group.detections.length;
+        const firstAppearance = group.detections.sort((a, b) => a.timestamp - b.timestamp)[0].timestamp;
+        
+        const age = Math.round(group.detections.reduce((sum, d) => sum + d.age, 0) / appearances);
+        
+        const gender = group.detections.reduce((acc, d) => {
+            acc[d.gender] = (acc[d.gender] || 0) + 1;
+            return acc;
+        }, {});
+        const mainGender = Object.keys(gender).reduce((a, b) => gender[a] > gender[b] ? a : b);
+
+        const expressions = group.detections.reduce((acc, d) => {
+            const mainExpression = Object.keys(d.expressions).reduce((a, b) => d.expressions[a] > d.expressions[b] ? a : b);
+            acc[mainExpression] = (acc[mainExpression] || 0) + 1;
+            return acc;
+        }, {});
+        const mainExpression = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+
+        return {
+            id: `actor_${index + 1}`,
+            label: `배우 ${index + 1}`,
+            representativeImg: bestDetection.canvas.toDataURL(),
+            confidence: Math.round(bestDetection.detection.score * 100),
+            appearances: appearances,
+            firstAppearance: new Date(firstAppearance * 1000).toISOString().substr(11, 8),
+            role: '주연', // Placeholder
+            age: age,
+            gender: mainGender === 'male' ? '남성' : '여성',
+            mainExpression: mainExpression
+        };
+    });
+}
+
+function groupByFace(allDetections) {
+    const groups = [];
+    const distanceThreshold = 0.5; 
+
+    allDetections.forEach(detection => {
+        let foundGroup = false;
+        for (const group of groups) {
+            const representative = group.detections[0];
+            const distance = faceapi.euclideanDistance(detection.descriptor, representative.descriptor);
+            
+            if (distance < distanceThreshold) {
+                group.detections.push(detection);
+                foundGroup = true;
+                break;
+            }
+        }
+
+        if (!foundGroup) {
+            groups.push({ detections: [detection] });
+        }
+    });
+    return groups;
 }
 
 export async function analyzeFaces(videoElement) {
     if (!modelsLoaded) {
         console.error("모델이 로드되지 않았습니다.");
-        return null;
+        return;
     }
 
-    console.log("얼굴 분석 시작...");
     DOM.analyzeFacesBtn.disabled = true;
     DOM.analyzeFacesBtn.textContent = "분석 중...";
     DOM.analysisProgress.style.display = 'block';
     DOM.faceResults.innerHTML = '';
+    updateProgressBar(0, '분석 준비 중...');
 
-    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.7 });
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
     const videoDuration = videoElement.duration;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    const faceGroups = [];
-    const distanceThreshold = 0.5;
+    const sampleCount = Math.min(30, Math.floor(videoDuration));
+    const allDetections = [];
 
-    videoElement.pause();
+    const tempCanvas = document.createElement('canvas');
 
-    for (let i = 0; i < videoDuration; i++) {
-        videoElement.currentTime = i;
-        await waitForSeek(videoElement);
+    for (let i = 0; i < sampleCount; i++) {
+        const currentTime = (i / (sampleCount - 1)) * videoDuration;
+        videoElement.currentTime = currentTime;
+        await new Promise(resolve => {
+            videoElement.addEventListener('seeked', () => resolve(), { once: true });
+        });
 
-        canvas.width = videoElement.videoWidth;
-        canvas.height = videoElement.videoHeight;
-        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        tempCanvas.width = videoElement.videoWidth;
+        tempCanvas.height = videoElement.videoHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(videoElement, 0, 0);
 
-        const detections = await faceapi.detectAllFaces(canvas, options)
+        const detections = await faceapi.detectAllFaces(tempCanvas, options)
             .withFaceLandmarks()
             .withFaceExpressions()
             .withAgeAndGender()
             .withFaceDescriptors();
+        
+        for (const d of detections) {
+            const faceCanvas = document.createElement('canvas');
+            const faceCtx = faceCanvas.getContext('2d');
+            const { x, y, width, height } = d.detection.box;
+            faceCanvas.width = width;
+            faceCanvas.height = height;
+            faceCtx.drawImage(tempCanvas, x, y, width, height, 0, 0, width, height);
 
-        for (const detection of detections) {
-            let bestMatchingGroup = null;
-            let minDistance = Infinity;
-
-            for (const group of faceGroups) {
-                const representative = group[0];
-                const distance = faceapi.euclideanDistance(detection.descriptor, representative.descriptor);
-                
-                if (distance < distanceThreshold && distance < minDistance) {
-                    minDistance = distance;
-                    bestMatchingGroup = group;
-                }
-            }
-            
-            const detectionWithImage = { ...detection, image: canvas.toDataURL() };
-
-            if (bestMatchingGroup) {
-                bestMatchingGroup.push(detectionWithImage);
-            } else {
-                faceGroups.push([detectionWithImage]);
-            }
+            allDetections.push({ ...d, canvas: faceCanvas, timestamp: currentTime });
         }
         
-        const progress = (i / videoDuration) * 100;
-        DOM.faceProgressFill.style.width = `${progress}%`;
-        DOM.faceProgressText.textContent = `${Math.round(progress)}%`;
+        updateProgressBar((i + 1) / sampleCount, `영상 분석 중... (${i+1}/${sampleCount})`);
+        await new Promise(resolve => setTimeout(resolve, 10));
     }
 
-    console.log("얼굴 분석 완료. 총 그룹 수:", faceGroups.length);
-    DOM.analysisProgress.style.display = 'none';
+    if (allDetections.length === 0) {
+        updateProgressBar(1, '영상에서 얼굴을 찾지 못했습니다.');
+        DOM.analyzeFacesBtn.disabled = false;
+        DOM.analyzeFacesBtn.textContent = "얼굴 분석 시작";
+        DOM.faceResults.innerHTML = '<p style="text-align: center;">영상에서 얼굴을 찾지 못했습니다.</p>';
+        return;
+    }
+
+    updateProgressBar(1, '얼굴 그룹화 중...');
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const faceGroups = groupByFace(allDetections);
+    const actors = generateActorInfo(faceGroups);
+    displayActorResults(actors);
+
+    updateProgressBar(1, `분석 완료! 총 ${actors.length}명의 배우를 찾았습니다.`);
     DOM.analyzeFacesBtn.disabled = false;
     DOM.analyzeFacesBtn.textContent = "얼굴 분석 시작";
-    
-    if (faceGroups.length > 0) {
-        displayGroupedFaceResults(faceGroups);
-    } else {
-        DOM.faceResults.innerHTML = '<p style="text-align: center;">영상에서 얼굴을 찾지 못했습니다.</p>';
-    }
-
-    return faceGroups;
 } 
