@@ -1,6 +1,7 @@
 // This file contains UI-related helper functions.
 
 import * as DOM from './dom-elements.js';
+import { callAI } from './api.js';
 
 let uploadedFile = null;
 let chats = [];
@@ -288,6 +289,10 @@ function setupFileHandlingEventListeners() {
     domElements.loadNewVideoButton.addEventListener('click', () => domElements.fileInput.click());
 }
 
+function updateSendButtonState() {
+    DOM.sendChatBtn.disabled = DOM.chatInput.value.trim() === '';
+}
+
 function setupVideoControlEvents() {
     DOM.playBtn.addEventListener('click', () => {
         DOM.videoPreview.play();
@@ -373,8 +378,48 @@ function renderAll() {
     renderChatHistory();
 }
 
+async function handleSendMessage() {
+    const text = DOM.chatInput.value.trim();
+    if (!text) return;
+
+    addMessage('user', text);
+    DOM.chatInput.value = '';
+    updateSendButtonState();
+    DOM.chatInput.disabled = true;
+    addMessage('ai', '🤖 AI가 생각 중입니다...');
+
+    try {
+        const systemPrompt = "You are a helpful assistant for video editing.";
+        const aiResponse = await callAI(systemPrompt, text);
+        
+        // "생각 중입니다" 메시지 제거
+        const currentChat = chats.find(chat => chat.id === currentChatId);
+        if (currentChat) {
+            currentChat.messages.pop();
+        }
+        
+        addMessage('ai', aiResponse);
+
+    } catch (error) {
+        addMessage('ai', `오류가 발생했습니다: ${error.message}`);
+    } finally {
+        DOM.chatInput.disabled = false;
+        DOM.chatInput.focus();
+    }
+}
+
 function setupChatEventListeners() {
     domElements.newChatBtn.addEventListener('click', startNewChat);
+
+    domElements.sendChatBtn.addEventListener('click', handleSendMessage);
+    domElements.chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    });
+    domElements.chatInput.addEventListener('input', updateSendButtonState);
+
     domElements.processBtn.addEventListener('click', () => {
         addMessage('ai', '영상 처리 기능은 다음 단계에서 구현될 예정입니다.');
     });
