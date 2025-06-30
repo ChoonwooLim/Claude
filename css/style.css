@@ -1093,89 +1093,105 @@
             font-weight: 600;
         }
 
+        .face-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
         .face-results {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 1.5rem;
             margin-top: 2rem;
         }
 
         .face-card {
             background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
         }
 
         .face-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
         }
 
-        .face-card img {
+        .face-image-container {
             width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            background: #f8f9fa;
+            padding-top: 100%; /* 1:1 Aspect Ratio */
+            background-size: cover;
+            background-position: center;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .face-card h4 {
-            color: var(--text-primary);
-            margin: 0.5rem 0;
-            font-size: 1.1rem;
+        .face-info {
+            padding: 1rem;
+            flex-grow: 1;
         }
 
-        .face-card .face-info {
-            color: var(--text-secondary);
+        .face-info h4 {
+            margin: 0 0 0.75rem 0;
+            color: var(--accent-color);
+        }
+
+        .face-info p {
+            margin: 0.25rem 0;
             font-size: 0.9rem;
-            margin-bottom: 1rem;
         }
 
-        .face-card .face-actions {
+        .face-actions {
             display: flex;
+            padding: 0 1rem 1rem 1rem;
             gap: 0.5rem;
-            justify-content: center;
         }
 
-        .face-card .face-actions button {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
+        .face-actions button {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
             cursor: pointer;
-            font-size: 0.8rem;
             transition: all 0.2s ease;
+            font-size: 0.8rem;
+            background-color: var(--input-bg);
+            color: var(--text-secondary);
         }
 
-        .face-card .btn-edit {
-            background: #ffc107;
-            color: #212529;
+        .face-actions button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        .face-card .btn-edit:hover {
-            background: #e0a800;
+        .face-actions .btn-edit {
+            border-color: #f0ad4e;
+            color: #f0ad4e;
         }
-
-        .face-card .btn-upload {
-            background: #17a2b8;
+        .face-actions .btn-edit:hover {
+            background-color: #f0ad4e;
             color: white;
         }
 
-        .face-card .btn-upload:hover {
-            background: #138496;
+        .face-actions .btn-upload {
+            border-color: #5bc0de;
+            color: #5bc0de;
         }
-
-        .face-card .btn-delete {
-            background: #dc3545;
+        .face-actions .btn-upload:hover {
+            background-color: #5bc0de;
             color: white;
         }
 
-        .face-card .btn-delete:hover {
-            background: #c82333;
+        .face-actions .btn-delete {
+            border-color: #d9534f;
+            color: #d9534f;
+        }
+        .face-actions .btn-delete:hover {
+            background-color: #d9534f;
+            color: white;
         }
 
         .face-placeholder {
@@ -1810,98 +1826,4 @@
 
         .face-result-item:hover {
             transform: scale(1.05);
-        }
-
-        .face-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .face-card {
-            background: var(--card-bg);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .face-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
-        }
-
-        .face-image-container {
-            width: 100%;
-            padding-top: 100%; /* 1:1 Aspect Ratio */
-            background-size: cover;
-            background-position: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .face-info {
-            padding: 1rem;
-            flex-grow: 1;
-        }
-
-        .face-info h4 {
-            margin: 0 0 0.75rem 0;
-            color: var(--accent-color);
-        }
-
-        .face-info p {
-            margin: 0.25rem 0;
-            font-size: 0.9rem;
-        }
-
-        .face-actions {
-            display: flex;
-            padding: 0 1rem 1rem 1rem;
-            gap: 0.5rem;
-        }
-
-        .face-actions button {
-            flex-grow: 1;
-            padding: 0.5rem;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.8rem;
-            background-color: var(--input-bg);
-            color: var(--text-secondary);
-        }
-
-        .face-actions button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .face-actions .btn-edit {
-            border-color: #f0ad4e;
-            color: #f0ad4e;
-        }
-        .face-actions .btn-edit:hover {
-            background-color: #f0ad4e;
-            color: white;
-        }
-
-        .face-actions .btn-upload {
-            border-color: #5bc0de;
-            color: #5bc0de;
-        }
-        .face-actions .btn-upload:hover {
-            background-color: #5bc0de;
-            color: white;
-        }
-
-        .face-actions .btn-delete {
-            border-color: #d9534f;
-            color: #d9534f;
-        }
-        .face-actions .btn-delete:hover {
-            background-color: #d9534f;
-            color: white;
         }
